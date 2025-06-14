@@ -2,13 +2,13 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { User } from './user/user.entity';
-import { Item } from '../item/item.entity';
-import { Bid } from '../bid/bid.entity';
-import { Document } from '../document/document.entity';
+import { Item } from './item/item.entity';
+import { Bid } from './bid/bid.entity';
+import { Document } from './document/document.entity';
 import { AuthModule } from './auth/auth.module';
-import { ItemModule } from '../item/item.module';
-import { BidModule } from '../bid/bid.module';
-import { DocumentModule } from '../document/document.module';
+import { ItemModule } from './item/item.module';
+import { BidModule } from './bid/bid.module';
+import { DocumentModule } from './document/document.module';
 
 @Module({
   imports: [
@@ -25,7 +25,7 @@ import { DocumentModule } from '../document/document.module';
       entities: [User, Item, Bid, Document],
       synchronize: true, // use only in dev
     }),
-    TypeOrmModule.forFeature([User, Item, Bid]), // Document is now in DocumentModule
+    TypeOrmModule.forFeature([]),
     AuthModule,
     ItemModule,
     BidModule,

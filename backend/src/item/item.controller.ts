@@ -6,7 +6,6 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { User } from '../user/user.entity';
-import { Role } from '../auth/dto/signup.dto'; // Assuming Role enum is here for ADMIN string
 
 @Controller('items')
 export class ItemController {
@@ -57,7 +56,7 @@ export class ItemController {
 
   @Patch(':id/approve')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
+  @Roles('ADMIN')
   approveItem(@Param('id', ParseUUIDPipe) id: string, @Req() req) {
     const user = req.user as User; // User is guaranteed by JwtAuthGuard
     return this.itemService.approveItem(id, user);
@@ -65,7 +64,7 @@ export class ItemController {
 
   @Patch(':id/reject')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
+  @Roles('ADMIN')
   rejectItem(@Param('id', ParseUUIDPipe) id: string, @Req() req) {
     const user = req.user as User; // User is guaranteed by JwtAuthGuard
     return this.itemService.rejectItem(id, user);

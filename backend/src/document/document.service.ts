@@ -1,4 +1,5 @@
 // backend/src/document/document.service.ts
+// Note: Usage of 'Express.Multer.File' type requires '@types/multer' to be installed.
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';

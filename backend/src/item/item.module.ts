@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ItemService } from './item.service';
-import { ItemController } from './item.controller.ts';
+import { ItemController } from './item.controller';
 import { Item } from './item.entity';
 import { AuthModule } from '../auth/auth.module'; // For JwtAuthGuard if not global
 

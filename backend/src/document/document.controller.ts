@@ -1,6 +1,7 @@
 // backend/src/document/document.controller.ts
+// Note: Usage of 'Express.Multer.File' type requires '@types/multer' to be installed.
 import {
-  Controller, Get, Post, Param, UseGuards, Req, UploadedFile, UseInterceptors, ParseUUIDPipe, Delete, Query, Optional, Body
+  Controller, Get, Post, Param, UseGuards, Req, UploadedFile, UseInterceptors, ParseUUIDPipe, Delete, Optional, Body
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
