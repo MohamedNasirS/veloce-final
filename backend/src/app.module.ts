@@ -18,7 +18,7 @@ import { DocumentModule } from './document/document.module';
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: process.env.POSTGRES_HOST || 'localhost',
-      port: parseInt(process.env.POSTGRES_PORT, 10) || 5432,
+      port: Number(process.env.POSTGRES_PORT) || 5432,
       username: process.env.POSTGRES_USER || 'your_pg_username',
       password: process.env.POSTGRES_PASSWORD || 'your_pg_password',
       database: process.env.POSTGRES_DB || 'your_database_name',

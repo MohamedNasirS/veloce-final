@@ -34,20 +34,27 @@ export class DocumentService {
       }
     }
 
-    const document = this.documentRepository.create({
+    const docData: Partial<Document> = { // Use Partial<Document> for type safety
       filename: file.originalname,
       mimetype: file.mimetype,
-      storagePath: file.path, // Path where multer saved the file
+      storagePath: file.path,
       fileSize: file.size,
       uploadedByUserId: user.id,
-      relatedItemId: relatedItemId || null,
-    });
+    };
 
-    const savedDocument = await this.documentRepository.save(document);
+    if (relatedItemId) { // Check if relatedItemId is provided and not an empty string
+      docData.relatedItemId = relatedItemId;
+    }
+    // If relatedItemId is not provided or is an empty string, it remains undefined in docData,
+    // which matches the 'string | undefined' type in the entity.
+
+    const document = this.documentRepository.create(docData);
+
+    const savedDocument: Document = await this.documentRepository.save(document);
     return this.mapDocumentToResponseDto(savedDocument);
   }
 
-  async getDocumentInfo(id: string): Promise<FileResponseDto | null> {
+  async getDocumentInfo(id: string): Promise<FileResponseDto> {
     const document = await this.documentRepository.findOne({ where: { id } });
     if (!document) {
       throw new NotFoundException(`Document with ID "${id}" not found.`);
