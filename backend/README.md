@@ -57,6 +57,70 @@ $ npm run test:e2e
 $ npm run test:cov
 ```
 
+## Application Setup
+
+This application requires a PostgreSQL database and specific environment variables to be configured for proper operation.
+
+### Environment Variables
+
+Create a `.env` file in the `backend` directory or set the following environment variables in your deployment environment:
+
+-   `POSTGRES_HOST`: Hostname of your PostgreSQL server (e.g., `localhost`).
+-   `POSTGRES_PORT`: Port number for your PostgreSQL server (e.g., `5432`).
+-   `POSTGRES_USER`: Username for the PostgreSQL database.
+-   `POSTGRES_PASSWORD`: Password for the PostgreSQL user.
+-   `POSTGRES_DB`: Name of the PostgreSQL database to use.
+-   `JWT_SECRET`: A secret key for signing JWT tokens (e.g., `your-very-secret-key`). This was already part of the auth setup but is crucial.
+-   `PORT`: (Optional) The port on which the backend server will listen (defaults to 3000 if not set).
+
+Example `.env` file:
+
+```
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_USER=myuser
+POSTGRES_PASSWORD=mypassword
+POSTGRES_DB=bidding_app_db
+JWT_SECRET=supersecretkey123
+PORT=3001
+```
+
+### Database Setup
+
+1.  Ensure you have a running PostgreSQL instance.
+2.  Create a database with the name specified in `POSTGRES_DB`.
+3.  The application uses TypeORM with the `synchronize: true` option enabled in development mode (`app.module.ts`). This means that when the application starts, TypeORM will attempt to automatically create or update the database tables based on the defined entities. For production environments, it's recommended to set `synchronize: false` and use migrations for schema management.
+
+### File Uploads
+
+The application handles file uploads (e.g., for item images or documents). Uploaded files are stored in the `backend/uploads/` directory by default.
+
+**Important:** Due to limitations during automated setup, this directory might not be created automatically. Please ensure the `backend/uploads/` directory exists before running the application if you intend to use file upload features. You can create it with:
+
+```bash
+mkdir -p backend/uploads
+```
+(Run this command from the root of the repository).
+
+### Item Approval Workflow
+
+The application implements an approval process for items listed for bidding:
+
+-   **Item Statuses:** Items can have several statuses, including:
+    -   `PENDING_APPROVAL`: Newly created by a "Waste Generator" (user with the 'CREATOR' role) and awaiting admin review.
+    -   `OPEN`: Approved by an admin and visible for bidding by "Recyclers" ('BIDDER' role) and "Aggregators" ('AGGREGATOR' role).
+    -   `REJECTED`: Rejected by an admin.
+    -   `CLOSED`: Bidding period has ended.
+    -   `SOLD`: Item has been sold.
+-   **Creation:** When a Waste Generator creates an item, it automatically enters the `PENDING_APPROVAL` state.
+-   **Admin Review:** Users with the 'ADMIN' role are responsible for reviewing items in `PENDING_APPROVAL`. Admins can:
+    -   Approve the item, changing its status to `OPEN`.
+    -   Reject the item, changing its status to `REJECTED`.
+-   **Visibility:**
+    -   Recyclers and Aggregators can only view and bid on `OPEN` items.
+    -   Waste Generators can see the status of their own submitted items.
+    -   Admins have a broader view of items across various statuses for management purposes.
+
 ## Deployment
 
 When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
