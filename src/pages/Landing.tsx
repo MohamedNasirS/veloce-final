@@ -52,7 +52,7 @@ const Landing = () => {
       {/* Hero Section */}
       <div className="text-center mb-16">
         <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
-          Welcome to <span className="text-green-600">WasteBid</span>
+          Welcome to <span className="text-green-600">veloce</span>
         </h1>
         <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
           India's premier digital marketplace for waste management. Connect waste generators 
@@ -76,12 +76,12 @@ const Landing = () => {
         ) : (
           <div className="space-x-4">
             <Link to="/register">
-              <Button size="lg" className="text-lg px-8 py-3">
+              <Button size="lg" className="text-lg px-8 py-3 bg-orange-500 hover:bg-orange-600">
                 Get Started
               </Button>
             </Link>
             <Link to="/login">
-              <Button variant="outline" size="lg" className="text-lg px-8 py-3">
+              <Button variant="outline" size="lg" className="text-lg px-8 py-3 bg-green-600 hover:bg-green-700">
                 Login
               </Button>
             </Link>
@@ -109,7 +109,7 @@ const Landing = () => {
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {roles.map((role, index) => (
-            <Card key={index} className="hover:shadow-lg transition-shadow duration-300">
+            <Card key={index} className="hover:shadow-lg transition-transform transform hover:scale-105 duration-300 bg-white">
               <CardHeader>
                 <div className={`w-12 h-12 ${role.color} rounded-lg mb-4 flex items-center justify-center`}>
                   <role.icon className="w-6 h-6 text-white" />
@@ -133,7 +133,7 @@ const Landing = () => {
       </div>
 
       {/* Features Section */}
-      <div className="bg-white rounded-lg shadow-md p-8 mb-16">
+      <div className="bg-white rounded-lg shadow-md p-8 mb-16 hover:shadow-lg transition-transform transform hover:scale-105 duration-300">
         <h2 className="text-3xl font-bold text-center text-gray-900 mb-8">
           Platform Features
         </h2>
@@ -167,32 +167,53 @@ const Landing = () => {
         <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
           How It Works
         </h2>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="text-center">
+          {/* Card 1 */}
+          <div
+  className="shadow-md hover:shadow-xl transform hover:scale-105 transition duration-300 rounded-xl p-6 text-center bg-white"
+  
+>
             <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4 text-white font-bold text-lg">
               1
             </div>
             <h3 className="text-xl font-semibold mb-2">Post Your Waste</h3>
-            <p className="text-gray-600">Waste generators create detailed listings with photos, specifications, and pickup requirements</p>
+            <p className="text-black">
+              Waste generators create detailed listings with photos, specifications, and pickup requirements
+            </p>
           </div>
-          <div className="text-center">
+
+          {/* Card 2 */}
+          <div
+  className="shadow-md hover:shadow-xl transform hover:scale-105 transition duration-300 rounded-xl p-6 text-center bg-white"
+  
+>
             <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4 text-white font-bold text-lg">
               2
             </div>
             <h3 className="text-xl font-semibold mb-2">Receive Bids</h3>
-            <p className="text-gray-600">Certified recyclers and aggregators place competitive bids on your waste materials</p>
+            <p className="text-black">
+              Certified recyclers and aggregators place competitive bids on your waste materials
+            </p>
           </div>
-          <div className="text-center">
+
+          {/* Card 3 */}
+          <div
+  className="shadow-md hover:shadow-xl transform hover:scale-105 transition duration-300 rounded-xl p-6 text-center bg-white"
+  
+>
+
             <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center mx-auto mb-4 text-white font-bold text-lg">
               3
             </div>
             <h3 className="text-xl font-semibold mb-2">Complete Transaction</h3>
-            <p className="text-gray-600">Select the best bid, arrange pickup, and complete the transaction securely</p>
+            <p className="text-black">
+              Select the best bid, arrange pickup, and complete the transaction securely
+            </p>
           </div>
         </div>
       </div>
     </div>
   );
-};
-
+}
 export default Landing;
