@@ -24,7 +24,7 @@ const Navbar = () => {
         <div className="flex justify-between h-16">
           <div className="flex items-center">
             <Link to="/" className="text-2xl font-bold text-green-600">
-              WasteBid
+                Veloce
             </Link>
           </div>
           
