@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -43,15 +42,37 @@ const Register = () => {
     setLoading(true);
     setError('');
 
+    // Validation
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       setLoading(false);
       return;
     }
 
+    // Check required fields
+    if (!formData.name || !formData.email || !formData.password || !formData.company || !formData.role || !formData.phone || !formData.address) {
+      setError('Please fill in all required fields');
+      setLoading(false);
+      return;
+    }
+
+    // Check required documents
+    if (!documents.gstCertificate || !documents.panCard || !documents.bankDocument || !documents.companyRegistration) {
+      setError('Please upload all required documents');
+      setLoading(false);
+      return;
+    }
+
     try {
-      await register({ ...formData, documents });
-      alert('Registration submitted successfully! Your account is pending approval.');
+      // Remove confirmPassword from the data sent to backend
+      const { confirmPassword, ...registrationData } = formData;
+      
+      await register({ 
+        ...registrationData, 
+        documents 
+      });
+      
+      alert('Registration submitted successfully! Your account is pending approval. You will be notified once approved.');
       navigate('/login');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');
@@ -112,6 +133,7 @@ const Register = () => {
                       onChange={(e) => handleInputChange('password', e.target.value)}
                       required
                       placeholder="Enter password"
+                      minLength={6}
                     />
                   </div>
                   <div>
@@ -123,6 +145,7 @@ const Register = () => {
                       onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
                       required
                       placeholder="Confirm password"
+                      minLength={6}
                     />
                   </div>
                 </div>
@@ -144,7 +167,7 @@ const Register = () => {
                   </div>
                   <div>
                     <Label htmlFor="role">Role *</Label>
-                    <Select value={formData.role} onValueChange={(value) => handleInputChange('role', value)}>
+                    <Select value={formData.role} onValueChange={(value) => handleInputChange('role', value)} required>
                       <SelectTrigger>
                         <SelectValue placeholder="Select your role" />
                       </SelectTrigger>
@@ -196,21 +219,21 @@ const Register = () => {
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <FileUpload
-                    label="GST Certificate"
+                    label="GST Certificate *"
                     value={documents.gstCertificate}
                     onChange={(file) => handleDocumentChange('gstCertificate', file)}
                     required
                     description="Upload your company's GST registration certificate"
                   />
                   <FileUpload
-                    label="PAN Card"
+                    label="PAN Card *"
                     value={documents.panCard}
                     onChange={(file) => handleDocumentChange('panCard', file)}
                     required
                     description="Upload company or personal PAN card"
                   />
                   <FileUpload
-                    label="Bank Document"
+                    label="Bank Document *"
                     value={documents.bankDocument}
                     onChange={(file) => handleDocumentChange('bankDocument', file)}
                     required
@@ -224,7 +247,7 @@ const Register = () => {
                   />
                   <div className="md:col-span-2">
                     <FileUpload
-                      label="Company Registration / License"
+                      label="Company Registration / License *"
                       value={documents.companyRegistration}
                       onChange={(file) => handleDocumentChange('companyRegistration', file)}
                       required
@@ -261,12 +284,19 @@ const Register = () => {
               </div>
 
               {error && (
-                <div className="text-red-600 text-sm text-center">{error}</div>
+                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm">
+                  {error}
+                </div>
               )}
 
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? 'Creating Account...' : 'Create Account'}
               </Button>
+
+              <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-md text-sm">
+                <p className="font-medium">Important:</p>
+                <p>Your account will be reviewed by our team. You will receive an email notification once your account is approved and you can start using the platform.</p>
+              </div>
             </form>
 
             <div className="mt-6 text-center text-sm">

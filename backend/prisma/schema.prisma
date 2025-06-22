@@ -1,0 +1,80 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String    @id @default(cuid())
+  email              String    @unique
+  password           String
+  role               String    // 'generator', 'recycler', 'aggregator', 'admin'
+  name               String?
+  company            String?
+  phone              String?
+  address            String?
+  registrationNumber String?
+  taxId              String?
+  description        String?
+  status             String    @default("pending") // 'pending', 'approved', 'rejected'
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  documents          Document[]
+}
+
+model Document {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type         String   // 'gstCertificate', 'panCard', 'bankDocument', 'authorizedSignatory', 'companyRegistration'
+  originalName String
+  fileName     String   // stored file name
+  filePath     String   // file storage path
+  fileSize     Int
+  mimeType     String
+  uploadedAt   DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Notification {
+  id       String @id @default(cuid())
+  content  String
+  category String
+}
+
+model Auction {
+  id           String   @id @default(cuid())
+  product      Product  @relation(fields: [productId], references: [id])
+  productId    String   @unique
+  initialPrice Decimal
+  isListed     Boolean
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  bids         Bid[]
+}
+
+model Bid {
+  id        String  @id @default(cuid())
+  auctionId String
+  bidder    String
+  value     Decimal
+  auction   Auction @relation(fields: [auctionId], references: [id])
+
+  @@index([bidder])
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  tokenId     Int?
+  seller      String
+  auction     Auction?
+}

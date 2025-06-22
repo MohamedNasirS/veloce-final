@@ -1,87 +1,111 @@
+  import React, { createContext, useContext, useState, useEffect } from 'react';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { AuthContextType, User } from '../types';
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-// Mock users for demo
-const mockUsers: User[] = [
-  {
-    id: '1',
-    email: 'generator@waste.com',
-    role: 'waste-generator',
-    name: 'John Smith',
-    company: 'Green Industries Inc.',
-    status: 'approved'
-  },
-  {
-    id: '2',
-    email: 'recycler@eco.com',
-    role: 'recycler',
-    name: 'Sarah Johnson',
-    company: 'EcoRecycle Ltd.',
-    status: 'approved'
-  },
-  {
-    id: '3',
-    email: 'aggregator@aggregate.com',
-    role: 'aggregator',
-    name: 'Mike Wilson',
-    company: 'Waste Aggregators Co.',
-    status: 'approved'
-  },
-  {
-    id: '4',
-    email: 'admin@platform.com',
-    role: 'admin',
-    name: 'Admin User',
-    company: 'Platform Admin',
-    status: 'approved'
+  interface AuthContextType {
+    user: any;
+    login: (email: string, password: string) => Promise<any>;
+    register: (userData: any) => Promise<any>;
+    logout: () => void;
+    loading: boolean;
   }
-];
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-  useEffect(() => {
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
+  export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+      const token = localStorage.getItem('token');
+      const userData = localStorage.getItem('user');
+    
+      if (token && userData) {
+        setUser(JSON.parse(userData));
+      }
+      setLoading(false);
+    }, []);
+
+    const login = async (email: string, password: string) => {
+      try {
+        const response = await fetch('http://localhost:3001/api/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email, password }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || 'Login failed');
+        }
+
+        localStorage.setItem('token', data.access_token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        setUser(data.user);
+
+        return data;
+      } catch (error) {
+        console.error('Login error:', error);
+        throw error;
+      }
+    };
+
+    const logout = () => {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      setUser(null);
+    };
+
+    const register = async (userData: any) => {
+      try {
+        const formData = new FormData();
+    
+        // Add text fields
+        Object.keys(userData).forEach(key => {
+          if (key !== 'documents') {
+            formData.append(key, userData[key]);
+          }
+        });
+
+        // Add document files with proper field names
+        if (userData.documents) {
+          Object.entries(userData.documents).forEach(([type, file]: [string, any]) => {
+            if (file) {
+              formData.append(type, file);
+            }
+          });
+        }
+
+        const response = await fetch('http://localhost:3001/api/auth/register', {
+          method: 'POST',
+          body: formData,
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || 'Registration failed');
+        }
+
+        return data;
+      } catch (error) {
+        console.error('Registration error:', error);
+        throw error;
+      }
+    };
+
+    return (
+      <AuthContext.Provider value={{ user, login, logout, register, loading }}>
+        {children}
+      </AuthContext.Provider>
+    );
+  };
+
+  export const useAuth = () => {
+    const context = useContext(AuthContext);
+    if (!context) {
+      throw new Error('useAuth must be used within an AuthProvider');
     }
-  }, []);
-
-  const login = async (email: string, password: string) => {
-    const foundUser = mockUsers.find(u => u.email === email);
-    if (foundUser && foundUser.status === 'approved') {
-      setUser(foundUser);
-      localStorage.setItem('user', JSON.stringify(foundUser));
-    } else {
-      throw new Error('Invalid credentials or account not approved');
-    }
+    return context;
   };
-
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('user');
-  };
-
-  const register = async (userData: any) => {
-    // Mock registration - in real app would call API
-    console.log('Registration data:', userData);
-    throw new Error('Registration submitted for approval');
-  };
-
-  return (
-    <AuthContext.Provider value={{ user, login, logout, register }}>
-      {children}
-    </AuthContext.Provider>
-  );
-};
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};

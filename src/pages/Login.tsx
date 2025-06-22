@@ -89,11 +89,8 @@ const Login = () => {
           <div className="mt-6 p-4 bg-gray-50 rounded-lg">
             <p className="text-sm font-medium text-gray-700 mb-2">Demo Credentials:</p>
             <div className="space-y-1 text-xs text-gray-600">
-              <p>Waste Generator: generator@waste.com</p>
-              <p>Recycler: recycler@eco.com</p>
-              <p>Aggregator: aggregator@aggregate.com</p>
-              <p>Admin: admin@platform.com</p>
-              <p className="mt-2 font-medium">Password: any password</p>
+              <p>Use any registered email from the registration form</p>
+              <p className="mt-2 font-medium">Password: Use the password you set during registration</p>
             </div>
           </div>
         </CardContent>

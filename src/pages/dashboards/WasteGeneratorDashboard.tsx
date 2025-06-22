@@ -17,9 +17,9 @@ const WasteGeneratorDashboard = () => {
   const totalRevenue = closedBids.reduce((sum, bid) => sum + bid.currentPrice, 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-2xl font-bold">{myBids.length}</CardTitle>
@@ -80,9 +80,9 @@ const WasteGeneratorDashboard = () => {
           <CardDescription>Your latest waste listings</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <div className="space-y-2">
             {myBids.slice(0, 5).map((bid) => (
-              <div key={bid.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
+              <div key={bid.id} className="flex items-center justify-between p-2 border rounded-lg hover:bg-gray-50">
                 <div className="flex-1">
                   <h3 className="font-semibold">{bid.lotName}</h3>
                   <p className="text-sm text-gray-600">{bid.description}</p>
