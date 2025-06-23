@@ -86,11 +86,10 @@ export class AuthService {
                 userId: user.id,
                 type,
                 originalName: file.originalname,
-                fileName,
-                filePath,
-                relativePath: path.join('uploads', 'documents', userFolderName, type, fileName),
-                fileSize: file.size,
-                mimeType: file.mimetype,
+                filename: fileName,
+                path: filePath,
+                size: file.size,
+                mimetype: file.mimetype,
               },
             });
           }
@@ -171,10 +170,10 @@ export class AuthService {
         id: true,
         type: true,
         originalName: true,
-        fileName: true,
-        relativePath: true,
-        fileSize: true,
-        mimeType: true,
+        filename: true,
+        path: true,
+        size: true,
+        mimetype: true,
         uploadedAt: true,
       },
     });
@@ -208,10 +207,10 @@ export class AuthService {
     }
 
     return {
-      filePath: document.filePath,
-      relativePath: document.relativePath,
+      filePath: document.path,
+      relativePath: document.path,
       originalName: document.originalName,
-      mimeType: document.mimeType,
+      mimeType: document.mimetype,
     };
   }
 
