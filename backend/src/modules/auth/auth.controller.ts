@@ -9,8 +9,6 @@ import {
   UseInterceptors, 
   UploadedFiles,
   Res,
-  UseGuards,
-  Request
 } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
@@ -20,6 +18,11 @@ import { AuthService } from './auth.service';
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
+
+  @Get('test')
+  test() {
+    return { message: 'Auth routes are working!' };
+  }
 
   @Post('register')
   @UseInterceptors(FileFieldsInterceptor([
@@ -67,10 +70,16 @@ export class AuthController {
     }
   }
 
-  // Get user documents
+  // Get user documents with folder info
   @Get('documents/:userId')
   async getUserDocuments(@Param('userId') userId: string) {
     return this.authService.getUserDocuments(userId);
+  }
+
+  // Get user's folder structure
+  @Get('folder/:userId')
+  async getUserFolder(@Param('userId') userId: string) {
+    return this.authService.getUserFolderStructure(userId);
   }
 
   // Download document file
@@ -90,7 +99,7 @@ export class AuthController {
         const fileStream = fs.createReadStream(document.filePath);
         fileStream.pipe(res);
       } else {
-        res.status(404).json({ message: 'File not found' });
+        res.status(404).json({ message: 'File not found on disk' });
       }
     } catch (error) {
       res.status(400).json({ message: error.message });

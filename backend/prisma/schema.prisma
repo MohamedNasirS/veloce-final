@@ -11,36 +11,38 @@ datasource db {
 }
 
 model User {
-  id                 String    @id @default(cuid())
-  email              String    @unique
+  id                 String     @id @default(cuid())
+  name               String
+  email              String     @unique
   password           String
-  role               String    // 'generator', 'recycler', 'aggregator', 'admin'
-  name               String?
-  company            String?
-  phone              String?
-  address            String?
+  company            String
+  role               String
+  phone              String
+  address            String
   registrationNumber String?
   taxId              String?
   description        String?
-  status             String    @default("pending") // 'pending', 'approved', 'rejected'
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  status             String     @default("pending") // pending, approved, rejected
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
   documents          Document[]
 }
 
 model Document {
   id           String   @id @default(cuid())
   userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type         String   // 'gstCertificate', 'panCard', 'bankDocument', 'authorizedSignatory', 'companyRegistration'
+  type         String   // gstCertificate, panCard, etc.
   originalName String
-  fileName     String   // stored file name
-  filePath     String   // file storage path
+  fileName     String
+  filePath     String   // Absolute path on server
+  relativePath String?  // Relative path for easier access
   fileSize     Int
   mimeType     String
   uploadedAt   DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([type])
 }
 
 model Notification {
@@ -56,7 +58,7 @@ model Auction {
   initialPrice Decimal
   isListed     Boolean
   createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  updateAt     DateTime @updatedAt
   bids         Bid[]
 }
 
