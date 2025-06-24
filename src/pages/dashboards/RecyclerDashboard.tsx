@@ -8,7 +8,7 @@
   interface WasteBid {
     id: string;
     lotName: string;
-    description: string;
+    description: string;  
     wasteType: string;
     quantity: number;
     unit: string;
@@ -18,6 +18,7 @@
     status: string;
     endDate: string;
     creator: {
+      id?: string;
       name: string;
       company: string;
     };
@@ -40,28 +41,56 @@
 
   const RecyclerDashboard = () => {
     const { user } = useAuth();
+    
+    // Add this debugging
+    console.log('RecyclerDashboard - Current user:', user);
+    console.log('RecyclerDashboard - User authenticated:', !!user);
+    
     const [allBids, setAllBids] = useState<WasteBid[]>([]);
     const [myParticipations, setMyParticipations] = useState<WasteBid[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-      fetchBids();
+      if (user) {
+        fetchBids();
+      } else {
+        setLoading(false);
+      }
     }, [user]);
 
     const fetchBids = async () => {
       try {
+        setError(null);
         // Fetch all active bids
         const allBidsResponse = await fetch('http://localhost:3001/api/bids?status=published,in-progress');
+        
+        if (!allBidsResponse.ok) {
+          throw new Error(`HTTP error! status: ${allBidsResponse.status}`);
+        }
+        
         const allBidsData = await allBidsResponse.json();
-        setAllBids(allBidsData);
+        
+        // Ensure bidEntries is always an array
+        const sanitizedBids = allBidsData.map((bid: any) => ({
+          ...bid,
+          bidEntries: bid.bidEntries || [],
+          images: bid.images || [],
+          _count: bid._count || { bidEntries: 0 },
+          creator: bid.creator || { name: 'Unknown', company: 'Unknown' }
+        }));
+        
+        setAllBids(sanitizedBids);
 
         // Filter bids where user has participated
-        const participatedBids = allBidsData.filter((bid: WasteBid) =>
+        const participatedBids = sanitizedBids.filter((bid: WasteBid) =>
+          bid.bidEntries && bid.bidEntries.length > 0 && 
           bid.bidEntries.some(entry => entry.bidderId === user?.id)
         );
         setMyParticipations(participatedBids);
       } catch (error) {
         console.error('Error fetching bids:', error);
+        setError(error instanceof Error ? error.message : 'Failed to fetch bids');
       } finally {
         setLoading(false);
       }
@@ -92,14 +121,18 @@
       }
     };
 
+    // Safe calculations with null checks
     const myBidEntries = myParticipations.flatMap(bid => 
-      bid.bidEntries.filter(entry => entry.bidderId === user?.id)
+      (bid.bidEntries || []).filter(entry => entry.bidderId === user?.id)
     );
+    
     const wonBids = myParticipations.filter(bid => {
+      if (!bid.bidEntries || bid.bidEntries.length === 0) return false;
       const myBid = bid.bidEntries.find(entry => entry.bidderId === user?.id);
       return myBid && myBid.amount === bid.currentPrice;
     });
-    const totalWonValue = wonBids.reduce((sum, bid) => sum + bid.currentPrice, 0);
+    
+    const totalWonValue = wonBids.reduce((sum, bid) => sum + (bid.currentPrice || 0), 0);
 
     const getStatusColor = (status: string) => {
       switch (status) {
@@ -111,6 +144,7 @@
     };
 
     const isMyHighestBid = (bid: WasteBid) => {
+      if (!bid.bidEntries || bid.bidEntries.length === 0) return false;
       const myBid = bid.bidEntries.find(entry => entry.bidderId === user?.id);
       return myBid && myBid.amount === bid.currentPrice;
     };
@@ -119,6 +153,32 @@
       return (
         <div className="flex items-center justify-center p-8">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+          <span className="ml-2">Loading dashboard...</span>
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="flex items-center justify-center p-8">
+          <div className="text-center">
+            <div className="text-red-500 text-xl mb-4">⚠️ Error</div>
+            <p className="text-gray-600">{error}</p>
+            <Button onClick={() => fetchBids()} className="mt-4">
+              Retry
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    if (!user) {
+      return (
+        <div className="flex items-center justify-center p-8">
+          <div className="text-center">
+            <div className="text-gray-500 text-xl mb-4">🔒 Authentication Required</div>
+            <p className="text-gray-600">Please log in to access the dashboard.</p>
+          </div>
         </div>
       );
     }
@@ -188,79 +248,88 @@
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {allBids.filter(bid => bid.creator.id !== user?.id).slice(0, 5).map((bid) => {
-                const myBid = bid.bidEntries.find(entry => entry.bidderId === user?.id);
-                const isWinning = isMyHighestBid(bid);
-              
-                return (
-                  <div key={bid.id} className="border rounded-lg p-4 hover:bg-gray-50">
-                    <div className="flex justify-between items-start mb-3">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-lg">{bid.lotName}</h3>
-                        <p className="text-sm text-gray-600 mb-2">{bid.description}</p>
-                        <div className="flex flex-wrap gap-2 text-sm text-gray-500">
-                          <span>📍 {bid.location}</span>
-                          <span>📦 {bid.quantity} {bid.unit}</span>
-                          <span>🏭 {bid.creator.company}</span>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <Badge className={getStatusColor(bid.status)} variant="secondary">
-                          {bid.status === 'published' ? 'New' : 'Active'}
-                        </Badge>
-                        {bid.images.length > 0 && (
-                          <p className="text-xs text-gray-500 mt-1">📷 {bid.images.length} image(s)</p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-4">
-                        <div>
-                          <p className="text-xs text-gray-500">Current Price</p>
-                          <p className="text-xl font-bold text-green-600">${bid.currentPrice.toLocaleString()}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-500">Total Bids</p>
-                          <p className="text-sm font-medium">{bid._count.bidEntries}</p>
-                        </div>
-                        {myBid && (
-                          <div>
-                            <p className="text-xs text-gray-500">My Bid</p>
-                            <p className={`text-sm font-medium ${isWinning ? 'text-green-600' : 'text-orange-600'}`}>
-                              ${myBid.amount.toLocaleString()}
-                              {isWinning && ' 🏆'}
-                            </p>
+              {allBids
+                .filter(bid => bid.creator?.id !== user?.id)
+                .slice(0, 5)
+                .map((bid) => {
+                  const myBid = (bid.bidEntries || []).find(entry => entry.bidderId === user?.id);
+                  const isWinning = isMyHighestBid(bid);
+                
+                  return (
+                    <div key={bid.id} className="border rounded-lg p-4 hover:bg-gray-50">
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-lg">{bid.lotName || 'Unnamed Lot'}</h3>
+                          <p className="text-sm text-gray-600 mb-2">{bid.description || 'No description'}</p>
+                          <div className="flex flex-wrap gap-2 text-sm text-gray-500">
+                            <span>📍 {bid.location || 'Location TBD'}</span>
+                            <span>📦 {bid.quantity || 0} {bid.unit || 'units'}</span>
+                            <span>🏭 {bid.creator?.company || 'Unknown Company'}</span>
                           </div>
-                        )}
+                        </div>
+                        <div className="text-right">
+                          <Badge className={getStatusColor(bid.status)} variant="secondary">
+                            {bid.status === 'published' ? 'New' : 'Active'}
+                          </Badge>
+                          {(bid.images || []).length > 0 && (
+                            <p className="text-xs text-gray-500 mt-1">📷 {bid.images.length} image(s)</p>
+                          )}
+                        </div>
                       </div>
-                      
-                      <div className="flex gap-2">
-                        <Link to={`/bid/${bid.id}`}>
-                          <Button variant="outline" size="sm">
-                            View Details
-                          </Button>
-                        </Link>
-                        {bid.status !== 'closed' && new Date(bid.endDate) > new Date() && (
-                          <Button 
-                            size="sm"
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-4">
+                          <div>
+                            <p className="text-xs text-gray-500">Current Price</p>
+                            <p className="text-xl font-bold text-green-600">${(bid.currentPrice || 0).toLocaleString()}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500">Total Bids</p>
+                            <p className="text-sm font-medium">{bid._count?.bidEntries || 0}</p>
+                          </div>
+                          {myBid && (
+                            <div>
+                              <p className="text-xs text-gray-500">My Bid</p>
+                              <p className={`text-sm font-medium ${isWinning ? 'text-green-600' : 'text-orange-600'}`}>
+                                ${myBid.amount.toLocaleString()}
+                                {isWinning && ' 🏆'}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="flex gap-2">
+                          <Link 
+                            to={`/bid/${bid.id}`}
                             onClick={() => {
-                              const amount = prompt(`Enter your bid amount (current: $${bid.currentPrice}):`);
-                              if (amount && parseFloat(amount) > bid.currentPrice) {
-                                placeBid(bid.id, parseFloat(amount));
-                              }
+                              console.log('Clicking View Details for bid:', bid.id);
+                              console.log('Full bid object:', bid);
                             }}
                           >
-                            Place Bid
-                          </Button>
-                        )}
+                            <Button variant="outline" size="sm">
+                              View Details
+                            </Button>
+                          </Link>
+                          {bid.status !== 'closed' && new Date(bid.endDate) > new Date() && (
+                            <Button 
+                              size="sm"
+                              onClick={() => {
+                                const amount = prompt(`Enter your bid amount (current: ${bid.currentPrice || 0}):`);
+                                if (amount && parseFloat(amount) > (bid.currentPrice || 0)) {
+                                  placeBid(bid.id, parseFloat(amount));
+                                }
+                              }}
+                            >
+                              Place Bid
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                      <div className="mt-2 text-xs text-gray-500">
+                        Ends: {bid.endDate ? new Date(bid.endDate).toLocaleString() : 'Date TBD'}
                       </div>
                     </div>
-                    <div className="mt-2 text-xs text-gray-500">
-                      Ends: {new Date(bid.endDate).toLocaleString()}
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
             </div>
             
             {allBids.length === 0 && (
@@ -283,15 +352,15 @@
             <CardContent>
               <div className="space-y-4">
                 {myParticipations.slice(0, 3).map((bid) => {
-                  const myBid = bid.bidEntries.find(entry => entry.bidderId === user?.id);
+                  const myBid = (bid.bidEntries || []).find(entry => entry.bidderId === user?.id);
                   const isWinning = isMyHighestBid(bid);
                   
                   return (
                     <div key={bid.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
                       <div className="flex-1">
-                        <h3 className="font-semibold">{bid.lotName}</h3>
-                        <p className="text-sm text-gray-600">{bid.wasteType} • {bid.location}</p>
-                        <p className="text-sm text-gray-500">{bid.creator.company}</p>
+                        <h3 className="font-semibold">{bid.lotName || 'Unnamed Lot'}</h3>
+                        <p className="text-sm text-gray-600">{bid.wasteType || 'Unknown Type'} • {bid.location || 'Location TBD'}</p>
+                        <p className="text-sm text-gray-500">{bid.creator?.company || 'Unknown Company'}</p>
                       </div>
                       <div className="text-right">
                         <div className="flex items-center gap-2 mb-1">
@@ -302,9 +371,9 @@
                             {isWinning ? '🏆 Winning' : '📊 Bidding'}
                           </Badge>
                         </div>
-                        <p className="text-lg font-semibold">${myBid?.amount.toLocaleString()}</p>
+                        <p className="text-lg font-semibold">${myBid?.amount?.toLocaleString() || '0'}</p>
                         <p className="text-sm text-gray-500">
-                          Current: ${bid.currentPrice.toLocaleString()}
+                          Current: ${(bid.currentPrice || 0).toLocaleString()}
                         </p>
                       </div>
                     </div>

@@ -7,6 +7,10 @@ import { AuthProvider } from "./contexts/AuthContext";
 import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import DashboardLayout from "./components/DashboardLayout";
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from './contexts/AuthContext';
+
 
 // Pages
 import Landing from "./pages/Landing";
@@ -65,12 +69,17 @@ const App = () => (
             {/* Bid detail page */}
             <Route path="/bid/:bidId" element={
               <ProtectedRoute>
-                <Layout><BidDetail /></Layout>
+                <Layout>
+                  <div>
+                    {console.log('BidDetail route matched')}
+                    <BidDetail />
+                  </div>
+                </Layout>
               </ProtectedRoute>
             } />
 
-            {/* Dashboard routes */}
-            <Route path="/dashboard/*" element={
+            {/* Dashboard routes - Fixed structure */}
+            <Route path="/dashboard" element={
               <ProtectedRoute>
                 <DashboardLayout />
               </ProtectedRoute>
@@ -118,7 +127,7 @@ const App = () => (
                 </ProtectedRoute>
               } />
 
-              {/* Recycler Dashboard */}
+              {/* Recycler Dashboard - Fixed */}
               <Route path="recycler" element={
                 <ProtectedRoute allowedRoles={['recycler']}>
                   <RecyclerDashboard />
@@ -205,6 +214,13 @@ const App = () => (
                   </div>
                 </ProtectedRoute>
               } />
+
+              {/* Default dashboard route - redirects based on user role */}
+              <Route index element={
+                <ProtectedRoute>
+                  <DashboardRedirect />
+                </ProtectedRoute>
+              } />
             </Route>
 
             {/* Catch-all route */}
@@ -215,5 +231,39 @@ const App = () => (
     </TooltipProvider>
   </QueryClientProvider>
 );
+
+// Component to redirect to appropriate dashboard based on user role
+const DashboardRedirect = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  React.useEffect(() => {
+    if (user) {
+      switch (user.role) {
+        case 'waste_generator':
+          navigate('/dashboard/waste_generator', { replace: true });
+          break;
+        case 'recycler':
+          navigate('/dashboard/recycler', { replace: true });
+          break;
+        case 'aggregator':
+          navigate('/dashboard/aggregator', { replace: true });
+          break;
+        case 'admin':
+          navigate('/dashboard/admin', { replace: true });
+          break;
+        default:
+          navigate('/', { replace: true });
+      }
+    }
+  }, [user, navigate]);
+
+  return (
+    <div className="flex items-center justify-center p-8">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      <span className="ml-2">Redirecting to dashboard...</span>
+    </div>
+  );
+};
 
 export default App;
