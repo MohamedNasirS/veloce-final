@@ -54,17 +54,17 @@ const WasteGeneratorDashboard = () => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Link to="/dashboard/waste-generator/create-bid">
+            <Link to="/dashboard/waste_generator/create-bid">
               <Button className="w-full h-20 text-lg">
                 ➕ Create New Bid
               </Button>
             </Link>
-            <Link to="/dashboard/waste-generator/my-bids">
+            <Link to="/dashboard/waste_generator/my-bids">
               <Button variant="outline" className="w-full h-20 text-lg">
                 📋 View My Bids
               </Button>
             </Link>
-            <Link to="/dashboard/waste-generator/gate-passes">
+            <Link to="/dashboard/waste_generator/gate-passes">
               <Button variant="outline" className="w-full h-20 text-lg">
                 🎫 Gate Passes
               </Button>

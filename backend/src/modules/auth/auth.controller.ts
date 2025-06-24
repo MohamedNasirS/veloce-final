@@ -26,38 +26,31 @@ export class AuthController {
 
   @Post('register')
   @UseInterceptors(FileFieldsInterceptor([
-    { name: 'gstCertificate', maxCount: 1 },
-    { name: 'panCard', maxCount: 1 },
-    { name: 'bankDocument', maxCount: 1 },
-    { name: 'authorizedSignatory', maxCount: 1 },
-    { name: 'companyRegistration', maxCount: 1 },
-  ]))
-  async register(
-    @Body() registerDto: any,
-    @UploadedFiles() files: { 
-      gstCertificate?: Express.Multer.File[], 
-      panCard?: Express.Multer.File[],
-      bankDocument?: Express.Multer.File[],
-      authorizedSignatory?: Express.Multer.File[],
-      companyRegistration?: Express.Multer.File[]
-    },
-  ) {
-    try {
-      const documentFiles = {};
-      if (files) {
-        Object.entries(files).forEach(([key, fileArray]) => {
-          if (fileArray && fileArray.length > 0) {
-            documentFiles[key] = fileArray[0];
-          }
-        });
-      }
-
-      return await this.authService.register(registerDto, documentFiles);
-    } catch (error) {
-      console.error('Registration controller error:', error);
-      throw error;
+  { name: 'gstCertificate', maxCount: 1 },
+  { name: 'panCard', maxCount: 1 },
+  { name: 'bankDocument', maxCount: 1 },
+  { name: 'authorizedSignatory', maxCount: 1 },
+  { name: 'companyRegistration', maxCount: 1 },
+]))
+async register(
+  @Body() registerDto: any,
+  @UploadedFiles() files: {
+    gstCertificate?: Express.Multer.File[],
+    panCard?: Express.Multer.File[],
+    bankDocument?: Express.Multer.File[],
+    authorizedSignatory?: Express.Multer.File[],
+    companyRegistration?: Express.Multer.File[],
+  },
+) {
+  const cleanedFiles = {};
+  for (const key in files) {
+    if (files[key] && files[key].length > 0) {
+      cleanedFiles[key] = files[key][0];
     }
   }
+  return await this.authService.register(registerDto, cleanedFiles);
+}
+
 
   @HttpCode(HttpStatus.OK)
   @Post('login')

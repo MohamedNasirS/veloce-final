@@ -2,36 +2,46 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import * as path from 'path';
+import { NestExpressApplication } from '@nestjs/platform-express';
 
 async function bootstrap() {
-  console.log('Starting NestJS application...');
-  
-  const app = await NestFactory.create(AppModule);
+  // ✅ Use Express version of Nest to allow static file serving
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // ✅ Serve static assets from `uploads` folder at `/uploads` path
+  app.useStaticAssets(path.resolve(__dirname, '..', 'uploads'), {
+    prefix: '/uploads', // will map to http://localhost:3001/uploads
+  });
+
+  // ✅ Swagger Setup
   const config = new DocumentBuilder()
     .setTitle('Auction API')
-    .setDescription('The Auction API blockchain integrated documentation')
+    .setDescription('The Auction API documentation')
     .setVersion('1.0')
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
-  app.useGlobalPipes(new ValidationPipe());
-  
-  // Enable CORS with proper configuration
-  app.enableCors({
-    origin: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
-    credentials: true,
-  });
 
-  // Add global prefix
+  // ✅ Global prefix for all routes
   app.setGlobalPrefix('api');
 
+  // ✅ Global validation pipes
+  app.useGlobalPipes(new ValidationPipe());
+
+  // ✅ Enable CORS
+  app.enableCors({
+    origin: true,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  });
+
+  // ✅ Start server
   await app.listen(3001);
-  console.log('✅ Backend is running on http://localhost:3001');
-  console.log('✅ API endpoints available at http://localhost:3001/api');
-  console.log('✅ Test endpoint: http://localhost:3001/api/auth/test');
+  console.log(`✅ Server running at http://localhost:3001`);
+  console.log(`🔗 Swagger: http://localhost:3001/api`);
+  console.log(`📁 Static files served from http://localhost:3001/uploads/...`);
 }
-bootstrap().catch(error => {
-  console.error('❌ Failed to start application:', error);
-});
+
+bootstrap();

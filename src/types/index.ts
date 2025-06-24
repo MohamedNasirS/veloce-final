@@ -2,7 +2,7 @@
 export interface User {
   id: string;
   email: string;
-  role: 'waste-generator' | 'recycler' | 'aggregator' | 'admin';
+  role: 'waste_generator' | 'recycler' | 'aggregator' | 'admin';
   name: string;
   company: string;
   status: 'pending' | 'approved' | 'rejected';

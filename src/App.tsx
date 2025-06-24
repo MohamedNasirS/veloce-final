@@ -68,41 +68,41 @@ const App = () => (
               </ProtectedRoute>
             }>
               {/* Waste Generator Dashboard */}
-              <Route path="waste-generator" element={
-                <ProtectedRoute allowedRoles={['waste-generator']}>
+              <Route path="waste_generator" element={
+                <ProtectedRoute allowedRoles={['waste_generator']}>
                   <WasteGeneratorDashboard />
                 </ProtectedRoute>
               } />
-              <Route path="waste-generator/create-bid" element={
-                <ProtectedRoute allowedRoles={['waste-generator']}>
+              <Route path="waste_generator/create-bid" element={
+                <ProtectedRoute allowedRoles={['waste_generator']}>
                   <CreateBid />
                 </ProtectedRoute>
               } />
-              <Route path="waste-generator/my-bids" element={
-                <ProtectedRoute allowedRoles={['waste-generator']}>
+              <Route path="waste_generator/my-bids" element={
+                <ProtectedRoute allowedRoles={['waste_generator']}>
                   <MyBids />
                 </ProtectedRoute>
               } />
-              <Route path="waste-generator/select-winner/:bidId" element={
-                <ProtectedRoute allowedRoles={['waste-generator']}>
+              <Route path="waste_generator/select-winner/:bidId" element={
+                <ProtectedRoute allowedRoles={['waste_generator']}>
                   <SelectWinner />
                 </ProtectedRoute>
               } />
-              <Route path="waste-generator/select-venue/:bidId" element={
-                <ProtectedRoute allowedRoles={['waste-generator']}>
+              <Route path="waste_generator/select-venue/:bidId" element={
+                <ProtectedRoute allowedRoles={['waste_generator']}>
                   <SelectVenue />
                 </ProtectedRoute>
               } />
-              <Route path="waste-generator/gate-passes" element={
-                <ProtectedRoute allowedRoles={['waste-generator']}>
+              <Route path="waste_generator/gate-passes" element={
+                <ProtectedRoute allowedRoles={['waste_generator']}>
                   <div className="p-8 text-center">
                     <h2 className="text-2xl font-semibold mb-4">Gate Passes</h2>
                     <p className="text-gray-600">Gate pass management coming soon.</p>
                   </div>
                 </ProtectedRoute>
               } />
-              <Route path="waste-generator/gate-passes/:bidId" element={
-                <ProtectedRoute allowedRoles={['waste-generator']}>
+              <Route path="waste_generator/gate-passes/:bidId" element={
+                <ProtectedRoute allowedRoles={['waste_generator']}>
                   <div className="p-8 text-center">
                     <h2 className="text-2xl font-semibold mb-4">Generate Gate Pass</h2>
                     <p className="text-gray-600">Gate pass generation coming soon.</p>

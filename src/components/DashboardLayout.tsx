@@ -17,13 +17,13 @@ const DashboardLayout = () => {
 
   const getSidebarItems = (): SidebarItem[] => {
     switch (user?.role) {
-      case 'waste-generator':
+      case 'waste_generator':
         return [
-          { label: 'Dashboard', path: '/dashboard/waste-generator', icon: '🏠' },
-          { label: 'Create Bid', path: '/dashboard/waste-generator/create-bid', icon: '➕' },
-          { label: 'My Bids', path: '/dashboard/waste-generator/my-bids', icon: '📋' },
-          { label: 'Select Winner', path: '/dashboard/waste-generator/select-winner', icon: '🏆' },
-          { label: 'Gate Passes', path: '/dashboard/waste-generator/gate-passes', icon: '🎫' },
+          { label: 'Dashboard', path: '/dashboard/waste_generator', icon: '🏠' },
+          { label: 'Create Bid', path: '/dashboard/waste_generator/create-bid', icon: '➕' },
+          { label: 'My Bids', path: '/dashboard/waste_generator/my-bids', icon: '📋' },
+          { label: 'Select Winner', path: '/dashboard/waste_generator/select-winner', icon: '🏆' },
+          { label: 'Gate Passes', path: '/dashboard/waste_generator/gate-passes', icon: '🎫' },
         ];
       case 'recycler':
       case 'aggregator':

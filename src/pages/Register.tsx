@@ -172,7 +172,7 @@ const Register = () => {
                         <SelectValue placeholder="Select your role" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="waste-generator">Waste Generator</SelectItem>
+                        <SelectItem value="waste_generator">Waste Generator</SelectItem>
                         <SelectItem value="recycler">Recycler</SelectItem>
                         <SelectItem value="aggregator">Aggregator</SelectItem>
                       </SelectContent>

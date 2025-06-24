@@ -15,25 +15,32 @@ const Login = () => {
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
+  e.preventDefault();
+  setLoading(true);
+  setError('');
 
-    try {
-      await login(email, password);
-      // Redirect based on user role after successful login
-      const loggedInUser = JSON.parse(localStorage.getItem('user') || '{}');
-      if (loggedInUser.role) {
-        navigate(`/dashboard/${loggedInUser.role}`);
-      } else {
-        navigate('/');
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed');
-    } finally {
-      setLoading(false);
+  try {
+    const response = await login(email, password);
+
+    // Save details for other components (like CreateBid) to use
+    if (response && response.user) {
+      localStorage.setItem('userId', response.user.id);        // ✅ for creatorId
+      localStorage.setItem('userRole', response.user.role);    // optional
+      localStorage.setItem('userEmail', response.user.email);  // optional
     }
-  };
+
+    const loggedInUser = response.user;
+    if (loggedInUser.role) {
+      navigate(`/dashboard/${loggedInUser.role}`);
+    } else {
+      navigate('/');
+    }
+  } catch (err) {
+    setError(err instanceof Error ? err.message : 'Login failed');
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">

@@ -1,167 +1,134 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
-import { useMockBids, useCountdown } from '../hooks/useMockData';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
+import { RefreshCw } from 'lucide-react';
+import { useCountdown } from '../hooks/useMockData';
 
 const CountdownTimer: React.FC<{ endDate: string }> = ({ endDate }) => {
   const timeLeft = useCountdown(endDate);
-  return (
-    <span className="text-red-600 font-bold">{timeLeft}</span>
-  );
+  return <span className="text-red-600 font-bold">{timeLeft}</span>;
 };
 
 const LiveBids = () => {
   const { user } = useAuth();
-  const { bids } = useMockBids();
-  const [selectedBid, setSelectedBid] = useState<string | null>(null);
+  const [bids, setBids] = useState<any[]>([]);
+  const [selectedBid, setSelectedBid] = useState<any | null>(null);
+  const [bidAmount, setBidAmount] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const activeBids = bids.filter(bid => bid.status === 'in-progress');
+  const fetchLiveBids = () => {
+    setLoading(true);
+    axios.get('http://localhost:3001/api/bids/approved')
+      .then(res => setBids(res.data.filter((b: any) => b.status === 'LIVE')))
+      .catch(err => console.error('Failed to fetch live bids', err))
+      .finally(() => setLoading(false));
+  };
 
-  const handleBidClick = (bidId: string) => {
-    if (user?.role === 'recycler' || user?.role === 'aggregator') {
-      setSelectedBid(bidId);
+  useEffect(() => {
+    fetchLiveBids();
+  }, []);
+
+  const handleBidSubmit = async () => {
+    if (!selectedBid || !bidAmount || !user) return;
+    try {
+      await axios.patch(`http://localhost:3001/api/bids/${selectedBid.id}/bid`, {
+        userId: user.id,
+        amount: parseFloat(bidAmount),
+      });
+      setSelectedBid(null);
+      setBidAmount('');
+      fetchLiveBids();
+    } catch (err) {
+      console.error('Bid submission failed', err);
     }
   };
 
-  const getMyBid = (bidEntry: any[]) => {
-    if (!user) return null;
-    return bidEntry.find(bid => bid.bidderId === user.id);
-  };
-
-  const getMyRank = (bidEntry: any[]) => {
-    if (!user) return '-';
-    const myBid = bidEntry.find(bid => bid.bidderId === user.id);
-    return myBid ? myBid.rank : '-';
+  const getMyBidAmount = (bid: any) => {
+    const my = bid.participants?.find((p: any) => p.userId === user?.id);
+    return my ? `$${my.amount}` : '-';
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Live Bidding</h1>
-        <p className="text-gray-600">Active auctions available for bidding</p>
+    <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="flex justify-between items-center mb-4">
+        <div>
+          <h1 className="text-2xl font-bold">Live Auctions</h1>
+          <p className="text-sm text-gray-500">Place your bid on active lots.</p>
+        </div>
+        <Button onClick={fetchLiveBids} variant="outline" disabled={loading}>
+          <RefreshCw className="w-4 h-4 mr-1" /> Refresh
+        </Button>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Active Auctions ({activeBids.length})</CardTitle>
+          <CardTitle>Live Bids ({bids.length})</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
+            <table className="w-full">
               <thead>
-                <tr className="border-b bg-gray-50">
-                  <th className="text-left p-3 font-semibold">Lot Name</th>
-                  <th className="text-left p-3 font-semibold">Start/End Date</th>
-                  <th className="text-left p-3 font-semibold">Remaining Time</th>
-                  <th className="text-left p-3 font-semibold">Status</th>
-                  <th className="text-right p-3 font-semibold">Current Amount</th>
-                  <th className="text-right p-3 font-semibold">My Bid</th>
-                  <th className="text-center p-3 font-semibold">My Rank</th>
-                  <th className="text-center p-3 font-semibold">Action</th>
+                <tr>
+                  <th className="text-left p-3">Lot</th>
+                  <th>Schedule</th>
+                  <th>Time Left</th>
+                  <th>Status</th>
+                  <th className="text-right">Current</th>
+                  <th className="text-right">Your Bid</th>
+                  <th className="text-center">Action</th>
                 </tr>
               </thead>
               <tbody>
-                {activeBids.map((bid) => {
-                  const myBid = getMyBid(bid.bids);
-                  const myRank = getMyRank(bid.bids);
-                  
-                  return (
-                    <tr key={bid.id} className="border-b hover:bg-gray-50 transition-colors">
-                      <td className="p-3">
-                        <div>
-                          <button
-                            onClick={() => handleBidClick(bid.id)}
-                            className="font-semibold text-blue-600 hover:text-blue-800 text-left"
-                          >
-                            {bid.lotName}
-                          </button>
-                          <div className="text-sm text-gray-500">{bid.description}</div>
-                          <div className="text-sm text-gray-500">{bid.location}</div>
-                        </div>
-                      </td>
-                      <td className="p-3">
-                        <div className="text-sm">
-                          <div>Start: {new Date(bid.startDate).toLocaleDateString()}</div>
-                          <div>End: {new Date(bid.endDate).toLocaleDateString()}</div>
-                        </div>
-                      </td>
-                      <td className="p-3">
-                        <CountdownTimer endDate={bid.endDate} />
-                      </td>
-                      <td className="p-3">
-                        <Badge variant="secondary" className="bg-orange-100 text-orange-800">
-                          Auction in progress
-                        </Badge>
-                      </td>
-                      <td className="p-3 text-right font-semibold">
-                        ${bid.currentPrice.toLocaleString()}
-                      </td>
-                      <td className="p-3 text-right">
-                        {myBid ? `$${myBid.amount.toLocaleString()}` : '-'}
-                      </td>
-                      <td className="p-3 text-center">
-                        <span className={`font-semibold ${myRank === 1 ? 'text-green-600' : myRank === 2 ? 'text-orange-600' : 'text-gray-600'}`}>
-                          {myRank}
-                        </span>
-                      </td>
-                      <td className="p-3 text-center">
-                        {(user?.role === 'recycler' || user?.role === 'aggregator') && (
-                          <Button 
-                            size="sm" 
-                            className="bg-green-600 hover:bg-green-700"
-                            onClick={() => handleBidClick(bid.id)}
-                          >
-                            Bid
-                          </Button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
+                {bids.map(bid => (
+                  <tr key={bid.id} className="border-b">
+                    <td className="p-3">
+                      <div className="font-semibold text-blue-600">{bid.lotName}</div>
+                      <div className="text-xs text-gray-500">{bid.description}</div>
+                    </td>
+                    <td className="text-sm text-gray-600">
+                      <div>{new Date(bid.startDate).toLocaleString()}</div>
+                      <div>{new Date(bid.endDate).toLocaleString()}</div>
+                    </td>
+                    <td><CountdownTimer endDate={bid.endDate} /></td>
+                    <td>
+                      <Badge className="bg-green-100 text-green-700">LIVE</Badge>
+                    </td>
+                    <td className="text-right font-bold">${bid.currentPrice.toLocaleString()}</td>
+                    <td className="text-right">{getMyBidAmount(bid)}</td>
+                    <td className="text-center">
+                      {(user?.role === 'recycler' || user?.role === 'aggregator') && (
+                        <Button size="sm" onClick={() => setSelectedBid(bid)}>Bid</Button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
-          
-          {activeBids.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              No active auctions at the moment. Check back later!
-            </div>
-          )}
         </CardContent>
       </Card>
 
-      {/* Bidding Modal/Form would go here */}
       {selectedBid && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">Place Bid</h3>
-            <p className="text-gray-600 mb-4">
-              Enter your bid amount for {bids.find(b => b.id === selectedBid)?.lotName}
-            </p>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Current Highest Bid: ${bids.find(b => b.id === selectedBid)?.currentPrice.toLocaleString()}
-                </label>
-                <input
-                  type="number"
-                  className="w-full border rounded-md px-3 py-2"
-                  placeholder="Enter your bid amount"
-                  min={bids.find(b => b.id === selectedBid)?.currentPrice}
-                />
-              </div>
-              <div className="flex space-x-3">
-                <Button className="flex-1">Submit Bid</Button>
-                <Button 
-                  variant="outline" 
-                  onClick={() => setSelectedBid(null)}
-                  className="flex-1"
-                >
-                  Cancel
-                </Button>
-              </div>
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+          <div className="bg-white p-6 rounded shadow-md w-full max-w-md mx-4">
+            <h2 className="text-lg font-bold mb-4">Place Bid for {selectedBid.lotName}</h2>
+            <div className="mb-2 text-sm text-gray-600">
+              Current Highest Bid: ${selectedBid.currentPrice.toLocaleString()}
+            </div>
+            <input
+              type="number"
+              value={bidAmount}
+              min={selectedBid.currentPrice + 1}
+              onChange={e => setBidAmount(e.target.value)}
+              className="w-full border px-3 py-2 rounded mb-4"
+              placeholder="Enter your bid amount"
+            />
+            <div className="flex justify-end gap-2">
+              <Button onClick={handleBidSubmit}>Submit</Button>
+              <Button variant="outline" onClick={() => setSelectedBid(null)}>Cancel</Button>
             </div>
           </div>
         </div>

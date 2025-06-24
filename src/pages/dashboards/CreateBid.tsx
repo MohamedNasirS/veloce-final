@@ -1,5 +1,5 @@
-
 import React, { useState } from 'react';
+import axios from 'axios';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -10,6 +10,7 @@ import { useToast } from '../../hooks/use-toast';
 import FileUpload from '../../components/FileUpload';
 
 const CreateBid = () => {
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     lotName: '',
     description: '',
@@ -19,35 +20,56 @@ const CreateBid = () => {
     location: '',
     startDate: '',
     endDate: '',
-    basePrice: ''
+    basePrice: '',
+    creatorId: localStorage.getItem('userId') || '',
   });
-  const [images, setImages] = useState<File[]>([]);
-  const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [images, setImages] = useState<File[]>([]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Create a mock bid with images
-    const bidData = {
-      ...formData,
-      images: images.map(img => img.name), // In real app, these would be uploaded URLs
-      status: 'pending' // Pending admin approval
-    };
-    
-    toast({
-      title: "Bid Submitted for Approval",
-      description: "Your waste listing has been submitted and is awaiting admin approval.",
+
+    const data = new FormData();
+    Object.entries(formData).forEach(([key, value]) => {
+      data.append(key, value);
     });
-    console.log('Creating bid:', bidData);
-    console.log('Images:', images);
+
+    images.forEach((img) => {
+      if (img) data.append('images', img);
+    });
+
+    await fetch('http://localhost:3001/api/bids', {
+      method: 'POST',
+      body: data,
+    });
+
+    toast({
+      title: "Bid Submitted",
+      description: "Your bid has been submitted successfully.",
+    });
+
+    // Reset form
+    setFormData({
+      lotName: '',
+      description: '',
+      wasteType: '',
+      quantity: '',
+      unit: 'tons',
+      location: '',
+      startDate: '',
+      endDate: '',
+      basePrice: '',
+      creatorId: localStorage.getItem('userId') || '',
+    });
+    setImages([]);
   };
 
   const handleChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleImageUpload = (file: File | null, index: number) => {
-    setImages(prev => {
+    setImages((prev) => {
       const newImages = [...prev];
       if (file) {
         newImages[index] = file;
@@ -60,7 +82,7 @@ const CreateBid = () => {
 
   const addImageSlot = () => {
     if (images.length < 5) {
-      setImages(prev => [...prev, null as any]);
+      setImages((prev) => [...prev, null as any]);
     }
   };
 
@@ -80,11 +102,10 @@ const CreateBid = () => {
                   id="lotName"
                   value={formData.lotName}
                   onChange={(e) => handleChange('lotName', e.target.value)}
-                  placeholder="e.g., Industrial Plastic Waste Lot #1"
                   required
                 />
               </div>
-              
+
               <div>
                 <Label htmlFor="wasteType">Waste Type</Label>
                 <Select value={formData.wasteType} onValueChange={(value) => handleChange('wasteType', value)}>
@@ -109,7 +130,6 @@ const CreateBid = () => {
                   type="number"
                   value={formData.quantity}
                   onChange={(e) => handleChange('quantity', e.target.value)}
-                  placeholder="Enter quantity"
                   required
                 />
               </div>
@@ -135,7 +155,6 @@ const CreateBid = () => {
                   id="location"
                   value={formData.location}
                   onChange={(e) => handleChange('location', e.target.value)}
-                  placeholder="e.g., Mumbai, Maharashtra"
                   required
                 />
               </div>
@@ -147,7 +166,6 @@ const CreateBid = () => {
                   type="number"
                   value={formData.basePrice}
                   onChange={(e) => handleChange('basePrice', e.target.value)}
-                  placeholder="Enter base price"
                   required
                 />
               </div>
@@ -181,7 +199,6 @@ const CreateBid = () => {
                 id="description"
                 value={formData.description}
                 onChange={(e) => handleChange('description', e.target.value)}
-                placeholder="Provide detailed description of the waste material, quality, condition, etc."
                 rows={4}
                 required
               />
@@ -201,15 +218,14 @@ const CreateBid = () => {
                   Add Image
                 </Button>
               </div>
-              <p className="text-sm text-gray-600">Upload up to 5 images of your waste items to help bidders understand the quality and condition.</p>
-              
+              <p className="text-sm text-gray-600">Upload up to 5 images of your waste items.</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {Array.from({ length: Math.max(1, images.length) }).map((_, index) => (
+                {images.map((img, index) => (
                   <FileUpload
                     key={index}
                     label={`Image ${index + 1}`}
                     accept="image/*"
-                    value={images[index] || null}
+                    value={img || null}
                     onChange={(file) => handleImageUpload(file, index)}
                     description="JPG, PNG up to 5MB"
                   />

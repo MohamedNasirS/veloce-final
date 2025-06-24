@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,73 +7,97 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  waste_generator
+  recycler
+  aggregator
+  admin
+}
+
+enum BidStatus {
+  PENDING    // Generator submitted
+  APPROVED   // Admin approved
+  LIVE       // Auction started
+  CLOSED     // Auction ended
+  CANCELLED  // If bid withdrawn or admin action
+}
+
 model User {
-  id                 String     @id @default(cuid())
-  name               String
-  email              String     @unique
-  password           String
-  company            String
-  role               String
-  phone              String
-  address            String
-  registrationNumber String?
-  taxId              String?
-  description        String?
-  status             String     @default("pending") // pending, approved, rejected
-  createdAt          DateTime   @default(now())
-  updatedAt          DateTime   @updatedAt
-  documents          Document[]
+  id                   String           @id @default(cuid())
+  name                 String
+  email                String           @unique
+  password             String
+  phone                String
+  company              String
+  role                 Role
+  address              String
+  registrationNumber   String?
+  taxId                String?
+  description          String?
+  isApproved           Boolean          @default(false)
+
+  documents            UserDocument?
+
+  bidsCreated          Bid[]            @relation("BidCreator")
+  bidsParticipated     BidParticipant[]
+  bidsWon              Bid[]            @relation("BidWinner")
+
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
 }
 
-model Document {
-  id           String   @id @default(cuid())
-  userId       String
-  type         String   // gstCertificate, panCard, etc.
-  originalName String
-  fileName     String
-  filePath     String   // Absolute path on server
-  relativePath String?  // Relative path for easier access
-  fileSize     Int
-  mimeType     String
-  uploadedAt   DateTime @default(now())
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+model UserDocument {
+  id                      String   @id @default(cuid())
+  userId                  String   @unique
+  user                    User     @relation(fields: [userId], references: [id])
 
-  @@index([userId])
-  @@index([type])
-}
+  gstCertificatePath      String
+  panCardPath             String
+  bankDocumentPath        String
+  authorizedSignatoryPath String?
+  companyRegistrationPath String
 
-model Notification {
-  id       String @id @default(cuid())
-  content  String
-  category String
-}
-
-model Auction {
-  id           String   @id @default(cuid())
-  product      Product  @relation(fields: [productId], references: [id])
-  productId    String   @unique
-  initialPrice Decimal
-  isListed     Boolean
-  createdAt    DateTime @default(now())
-  updateAt     DateTime @updatedAt
-  bids         Bid[]
+  uploadedAt              DateTime @default(now())
 }
 
 model Bid {
-  id        String  @id @default(cuid())
-  auctionId String
-  bidder    String
-  value     Decimal
-  auction   Auction @relation(fields: [auctionId], references: [id])
-
-  @@index([bidder])
+  id           String           @id @default(cuid())
+  lotName      String
+  description  String
+  wasteType    String
+  quantity     Float
+  unit         String
+  location     String
+  basePrice    Float
+  currentPrice Float
+  startDate    DateTime
+  endDate      DateTime
+  status       BidStatus        @default(PENDING)
+  creatorId    String
+  creator      User             @relation("BidCreator", fields: [creatorId], references: [id])
+  images       BidImage[]
+  participants BidParticipant[]
+  winnerId     String?
+  winner       User?            @relation("BidWinner", fields: [winnerId], references: [id])
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
 }
 
-model Product {
-  id          String   @id @default(cuid())
-  name        String
-  description String
-  tokenId     Int?
-  seller      String
-  auction     Auction?
+model BidImage {
+  id    String @id @default(cuid())
+  bidId String
+  path  String
+  bid   Bid    @relation(fields: [bidId], references: [id])
+}
+
+model BidParticipant {
+  id        String   @id @default(cuid())
+  bidId     String
+  userId    String
+  amount    Float
+  bid       Bid      @relation(fields: [bidId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@index([bidId, userId])
 }

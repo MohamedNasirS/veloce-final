@@ -25,31 +25,33 @@
     }, []);
 
     const login = async (email: string, password: string) => {
-      try {
-        const response = await fetch('http://localhost:3001/api/auth/login', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ email, password }),
-        });
+  try {
+    const response = await fetch('http://localhost:3001/api/auth/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, password }),
+    });
 
-        const data = await response.json();
+    const data = await response.json();
 
-        if (!response.ok) {
-          throw new Error(data.message || 'Login failed');
-        }
+    if (!response.ok) {
+      throw new Error(data.message || 'Login failed');
+    }
 
-        localStorage.setItem('token', data.access_token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        setUser(data.user);
+    localStorage.setItem('token', data.access_token);
+    localStorage.setItem('user', JSON.stringify(data.user));
+    localStorage.setItem('userId', data.user.id); // ✅ <-- add this
+    setUser(data.user);
 
-        return data;
-      } catch (error) {
-        console.error('Login error:', error);
-        throw error;
-      }
-    };
+    return data;
+  } catch (error) {
+    console.error('Login error:', error);
+    throw error;
+  }
+};
+
 
     const logout = () => {
       localStorage.removeItem('token');

@@ -1,5 +1,6 @@
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 
-import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
@@ -9,39 +10,85 @@ import { useToast } from '../../hooks/use-toast';
 
 const AdminUsers = () => {
   const { toast } = useToast();
-  const [users] = useState([
-    { id: '1', name: 'John Smith', email: 'generator@waste.com', role: 'waste-generator', company: 'Green Industries Inc.', status: 'approved', registeredDate: '2024-01-15' },
-    { id: '2', name: 'Sarah Johnson', email: 'recycler@eco.com', role: 'recycler', company: 'EcoRecycle Ltd.', status: 'approved', registeredDate: '2024-01-20' },
-    { id: '3', name: 'Mike Wilson', email: 'aggregator@aggregate.com', role: 'aggregator', company: 'Waste Aggregators Co.', status: 'pending', registeredDate: '2024-02-01' },
-    { id: '4', name: 'Alice Brown', email: 'alice@newrecycler.com', role: 'recycler', company: 'New Recycler Co.', status: 'pending', registeredDate: '2024-02-05' },
-    { id: '5', name: 'Bob Green', email: 'bob@rejected.com', role: 'waste-generator', company: 'Rejected Industries', status: 'rejected', registeredDate: '2024-01-10' }
-  ]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [selectedDocs, setSelectedDocs] = useState<any[]>([]);
+
+  useEffect(() => {
+    axios
+      .get('http://localhost:3001/api/admin/users')
+      .then((res) => {
+        // Filter out admin users
+        const filtered = res.data.filter((u: any) => u.role !== 'admin');
+        setUsers(filtered);
+      })
+      .catch((err) => {
+        console.error('Error fetching users:', err);
+      });
+  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'approved': return 'bg-green-100 text-green-800';
-      case 'pending': return 'bg-orange-100 text-orange-800';
-      case 'rejected': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'approved':
+        return 'bg-green-100 text-green-800';
+      case 'pending':
+        return 'bg-orange-100 text-orange-800';
+      case 'rejected':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
   const getRoleColor = (role: string) => {
     switch (role) {
-      case 'waste-generator': return 'bg-blue-100 text-blue-800';
-      case 'recycler': return 'bg-green-100 text-green-800';
-      case 'aggregator': return 'bg-purple-100 text-purple-800';
-      case 'admin': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'waste_generator':
+        return 'bg-blue-100 text-blue-800';
+      case 'recycler':
+        return 'bg-green-100 text-green-800';
+      case 'aggregator':
+        return 'bg-purple-100 text-purple-800';
+      case 'admin':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const handleStatusChange = (userId: string, newStatus: string) => {
-    toast({
-      title: "User Status Updated",
-      description: `User status has been changed to ${newStatus}.`,
-    });
-    console.log(`Updating user ${userId} status to ${newStatus}`);
+  const handleStatusChange = async (userId: string, newStatus: string) => {
+    try {
+      await axios.patch(`http://localhost:3001/api/admin/users/${userId}/status`, {
+        status: newStatus,
+      });
+      setUsers((prev) =>
+        prev.map((user) =>
+          user.id === userId ? { ...user, isApproved: newStatus === 'approved' } : user
+        )
+      );
+      toast({
+        title: 'User Status Updated',
+        description: `User status has been changed to ${newStatus}.`,
+      });
+    } catch (error) {
+      console.error('Status update failed:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update user status.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleViewDocuments = async (userId: string) => {
+    try {
+      const res = await axios.get(`http://localhost:3001/api/admin/users/${userId}/documents`);
+      setSelectedDocs(res.data.documents);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to load documents',
+        variant: 'destructive',
+      });
+    }
   };
 
   return (
@@ -74,22 +121,22 @@ const AdminUsers = () => {
                   </TableCell>
                   <TableCell>
                     <Badge className={getRoleColor(user.role)}>
-                      {user.role.replace('-', ' ')}
+                      {user.role.replace('_', ' ')}
                     </Badge>
                   </TableCell>
                   <TableCell>{user.company}</TableCell>
                   <TableCell className="text-sm text-gray-600">
-                    {new Date(user.registeredDate).toLocaleDateString()}
+                    {new Date(user.createdAt).toLocaleDateString()}
                   </TableCell>
                   <TableCell>
-                    <Badge className={getStatusColor(user.status)}>
-                      {user.status}
+                    <Badge className={getStatusColor(user.isApproved ? 'approved' : 'pending')}>
+                      {user.isApproved ? 'approved' : 'pending'}
                     </Badge>
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
-                      <Select 
-                        defaultValue={user.status}
+                      <Select
+                        defaultValue={user.isApproved ? 'approved' : 'pending'}
                         onValueChange={(value) => handleStatusChange(user.id, value)}
                       >
                         <SelectTrigger className="w-32">
@@ -101,7 +148,7 @@ const AdminUsers = () => {
                           <SelectItem value="rejected">Rejected</SelectItem>
                         </SelectContent>
                       </Select>
-                      <Button size="sm" variant="outline">
+                      <Button size="sm" variant="outline" onClick={() => handleViewDocuments(user.id)}>
                         View Documents
                       </Button>
                     </div>
@@ -113,7 +160,27 @@ const AdminUsers = () => {
         </CardContent>
       </Card>
 
-      {/* Statistics */}
+      {/* Display selected documents */}
+      {selectedDocs.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Documents</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="list-disc space-y-1 pl-5">
+              {selectedDocs.map((doc, index) => (
+                <li key={index}>
+                  <a href={doc.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
+                    {doc.name}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-2">
@@ -124,7 +191,7 @@ const AdminUsers = () => {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-2xl font-bold text-orange-600">
-              {users.filter(u => u.status === 'pending').length}
+              {users.filter((u) => !u.isApproved).length}
             </CardTitle>
             <CardDescription>Pending Approval</CardDescription>
           </CardHeader>
@@ -132,16 +199,14 @@ const AdminUsers = () => {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-2xl font-bold text-green-600">
-              {users.filter(u => u.status === 'approved').length}
+              {users.filter((u) => u.isApproved).length}
             </CardTitle>
             <CardDescription>Approved Users</CardDescription>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-2xl font-bold text-red-600">
-              {users.filter(u => u.status === 'rejected').length}
-            </CardTitle>
+            <CardTitle className="text-2xl font-bold text-red-600">0</CardTitle>
             <CardDescription>Rejected Users</CardDescription>
           </CardHeader>
         </Card>
