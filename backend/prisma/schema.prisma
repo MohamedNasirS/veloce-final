@@ -23,6 +23,7 @@ enum BidStatus {
 }
 
 model User {
+<<<<<<< HEAD
   id                   String           @id @default(cuid())
   name                 String
   email                String           @unique
@@ -58,6 +59,114 @@ model UserDocument {
   companyRegistrationPath String
 
   uploadedAt              DateTime @default(now())
+=======
+  id                 String     @id @default(cuid())
+  email              String     @unique
+  password           String
+  name               String
+  company            String
+  role               String
+  phone              String
+  address            String
+  registrationNumber String?
+  taxId              String?
+  description        String?
+  status             String     @default("pending")
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+  
+  // Relations
+  wasteBids          WasteBid[] @relation("WasteBidCreator")
+  bidEntries         BidEntry[] @relation("BidEntryBidder")
+  documents          Document[] // Remove the relation name here
+}
+
+model WasteBid {
+  id           String      @id @default(cuid())
+  lotName      String
+  description  String
+  wasteType    String
+  quantity     Decimal
+  unit         String
+  location     String
+  address      String
+  basePrice    Decimal
+  currentPrice Decimal
+  status       String      @default("draft")
+  startDate    DateTime
+  endDate      DateTime
+  createdById  String
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  
+  // Relations
+  creator      User        @relation("WasteBidCreator", fields: [createdById], references: [id])
+  bidEntries   BidEntry[]  @relation("WasteBidEntries")
+  images       BidImage[]  @relation("WasteBidImages")
+}
+
+model BidEntry {
+  id          String   @id @default(cuid())
+  wasteBidId  String
+  bidderId    String
+  amount      Decimal
+  message     String?
+  createdAt   DateTime @default(now())
+  
+  // Relations
+  wasteBid    WasteBid @relation("WasteBidEntries", fields: [wasteBidId], references: [id])
+  bidder      User     @relation("BidEntryBidder", fields: [bidderId], references: [id])
+  
+  @@index([bidderId])
+  @@index([wasteBidId])
+}
+
+model BidImage {
+  id           String   @id @default(cuid())
+  wasteBidId   String
+  originalName String
+  filename     String
+  mimetype     String
+  size         Int
+  relativePath String
+  createdAt    DateTime @default(now())
+  
+  // Relations
+  wasteBid     WasteBid @relation("WasteBidImages", fields: [wasteBidId], references: [id])
+  
+  @@index([wasteBidId])
+}
+
+model Document {
+  id           String   @id @default(cuid())
+  userId       String
+  filename     String
+  originalName String
+  mimetype     String
+  size         Int
+  path         String
+  type         String
+  uploadedAt   DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade) // Remove the relation name here too
+}
+
+// Keep existing models for backward compatibility
+model Notification {
+  id       String @id @default(cuid())
+  content  String
+  category String
+}
+
+model Auction {
+  id           String   @id @default(cuid())
+  product      Product  @relation(fields: [productId], references: [id])
+  productId    String   @unique
+  initialPrice Decimal
+  isListed     Boolean
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  bids         Bid[]
+>>>>>>> 24844d5f1965f1d807783db52e2a984b0e8a3ebb
 }
 
 model Bid {

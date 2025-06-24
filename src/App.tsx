@@ -14,6 +14,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import LiveBids from "./pages/LiveBids";
 import ClosedBids from "./pages/ClosedBids";
+import BidDetail from "./pages/BidDetail";
 import NotFound from "./pages/NotFound";
 
 // Dashboard Pages
@@ -58,6 +59,13 @@ const App = () => (
             <Route path="/closed-bids" element={
               <ProtectedRoute>
                 <Layout><ClosedBids /></Layout>
+              </ProtectedRoute>
+            } />
+            
+            {/* Bid detail page */}
+            <Route path="/bid/:bidId" element={
+              <ProtectedRoute>
+                <Layout><BidDetail /></Layout>
               </ProtectedRoute>
             } />
 
