@@ -77,7 +77,6 @@ export class AuthService {
       const signatoryPath = await saveFile('signatory', files.authorizedSignatory);
       const regPath = await saveFile('registration', files.companyRegistration);
 
-<<<<<<< HEAD
       await this.prisma.userDocument.create({
         data: {
           userId: user.id,
@@ -88,25 +87,6 @@ export class AuthService {
           companyRegistrationPath: regPath,
         },
       });
-=======
-            // Save document record to database
-            return this.prisma.document.create({
-              data: {
-                userId: user.id,
-                type,
-                originalName: file.originalname,
-                filename: fileName,
-                path: filePath,
-                size: file.size,
-                mimetype: file.mimetype,
-              },
-            });
-          }
-        });
-
-        await Promise.all(documentPromises.filter(Boolean));
-      }
->>>>>>> 24844d5f1965f1d807783db52e2a984b0e8a3ebb
 
       return {
         success: true,
@@ -136,105 +116,9 @@ export class AuthService {
 
 
   async login(email: string, password: string) {
-<<<<<<< HEAD
   try {
     const user = await this.prisma.user.findUnique({
       where: { email },
-=======
-    try {
-      const user = await this.prisma.user.findUnique({
-        where: { email },
-      });
-
-      if (!user) {
-        throw new UnauthorizedException('Invalid credentials');
-      }
-
-      const isPasswordValid = await bcrypt.compare(password, user.password);
-      if (!isPasswordValid) {
-        throw new UnauthorizedException('Invalid credentials');
-      }
-
-      const payload = { 
-        sub: user.id, 
-        email: user.email, 
-        role: user.role 
-      };
-
-      return {
-        success: true,
-        access_token: this.jwtService.sign(payload),
-        user: {
-          id: user.id,
-          email: user.email,
-          role: user.role,
-          name: user.name,
-        },
-      };
-    } catch (error) {
-      console.error('Login error:', error);
-      throw error;
-    }
-  }
-
-  // Method to get user documents with folder info
-  async getUserDocuments(userId: string) {
-    const documents = await this.prisma.document.findMany({
-      where: { userId },
-      select: {
-        id: true,
-        type: true,
-        originalName: true,
-        filename: true,
-        path: true,
-        size: true,
-        mimetype: true,
-        uploadedAt: true,
-      },
-    });
-
-    // Get user info for folder structure
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { email: true, company: true },
-    });
-
-    const userFolderName = user ? this.generateUserFolderName(userId, user.email, user.company) : userId;
-
-    return {
-      documents,
-      userFolder: userFolderName,
-      totalDocuments: documents.length,
-    };
-  }
-
-  // Method to get document file with proper path resolution
-  async getDocumentFile(documentId: string, userId: string) {
-    const document = await this.prisma.document.findFirst({
-      where: { 
-        id: documentId,
-        userId: userId 
-      },
-    });
-
-    if (!document) {
-      throw new BadRequestException('Document not found');
-    }
-
-    return {
-      filePath: document.path,
-      relativePath: document.path,
-      originalName: document.originalName,
-      mimeType: document.mimetype,
-    };
-  }
-
-  // Method to get user's folder structure
-  async getUserFolderStructure(userId: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { email: true, company: true, name: true },
->>>>>>> 24844d5f1965f1d807783db52e2a984b0e8a3ebb
     });
 
     if (!user) {
