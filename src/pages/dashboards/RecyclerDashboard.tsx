@@ -6,6 +6,28 @@ import { Badge } from '../../components/ui/badge';
 import { useAuth } from '../../contexts/AuthContext';
 import BidDetail from '../BidDetail';
 
+// Modal Component
+const Modal = ({ isOpen, onClose, title, children }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+      <div className="bg-white rounded-lg p-6 max-w-md w-full">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-semibold">{title}</h2>
+          <Button variant="ghost" onClick={onClose}>
+            ✕
+          </Button>
+        </div>
+        <div className="max-h-96 overflow-y-auto">{children}</div>
+        <div className="mt-4 flex justify-end">
+          <Button onClick={onClose}>Close</Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 interface WasteBid {
   id: string;
   lotName: string;
@@ -26,7 +48,7 @@ interface WasteBid {
   images: Array<{
     id: string;
     bidId?: string;
-    path?: string; // Use path from API
+    path?: string;
   }>;
   bidEntries: Array<{
     amount: number;
@@ -52,6 +74,8 @@ const RecyclerDashboard = () => {
   const [myParticipations, setMyParticipations] = useState<WasteBid[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalContent, setModalContent] = useState<{ id: string; originalName: string; url: string }[]>([]);
 
   useEffect(() => {
     if (user) {
@@ -69,7 +93,7 @@ const RecyclerDashboard = () => {
         throw new Error(`HTTP error! status: ${allBidsResponse.status}`);
       }
       const allBidsData = await allBidsResponse.json();
-      console.log('Raw API response:', allBidsData); // Debug API response
+      console.log('Raw API response:', allBidsData);
       const sanitizedBids = allBidsData.map((bid: any) => ({
         ...bid,
         bidEntries: bid.bidEntries || [],
@@ -77,7 +101,7 @@ const RecyclerDashboard = () => {
         _count: bid._count || { bidEntries: 0 },
         creator: bid.creator || { name: 'Unknown', company: 'Unknown' },
       }));
-      console.log('Sanitized bids:', sanitizedBids); // Debug sanitized data
+      console.log('Sanitized bids:', sanitizedBids);
       setAllBids(sanitizedBids);
       const participatedBids = sanitizedBids.filter((bid: WasteBid) =>
         bid.bidEntries &&
@@ -116,21 +140,19 @@ const RecyclerDashboard = () => {
     }
   };
 
-  // Construct image URLs for backend images
   const getImageUrls = (images: WasteBid['images']) => {
-    console.log('Images array:', images); // Debug images array
+    console.log('Images array:', images);
     return images.map(image => {
-      const path = image.path || '/uploads/bids/missing-filename.jpg'; // Fallback
+      const path = image.path || '/uploads/bids/missing-filename.jpg';
       console.log(`Processing image:`, image, `Path: ${path}`);
       return {
         id: image.id,
-        originalName: path.split('/').pop() || 'missing-filename.jpg', // Extract filename for display
-        url: `http://localhost:3001${path}`, // Use full path from API
+        originalName: path.split('/').pop() || 'missing-filename.jpg',
+        url: `http://localhost:3001${path}`,
       };
     });
   };
 
-  // Handle View Documents
   const handleViewDocuments = (bidId: string) => {
     const bid = allBids.find(b => b.id === bidId);
     if (!bid) {
@@ -138,11 +160,9 @@ const RecyclerDashboard = () => {
       alert('Bid not found');
       return;
     }
-    console.log('Clicking View Documents for bid:', bidId);
-    console.log('Full bid object:', bid);
     const imageUrls = getImageUrls(bid.images);
-    console.log('Image URLs:', imageUrls);
-    
+    setModalContent(imageUrls);
+    setIsModalOpen(true);
   };
 
   const myBidEntries = myParticipations.flatMap(bid =>
@@ -201,7 +221,7 @@ const RecyclerDashboard = () => {
     return (
       <div className="flex items-center justify-center p-8">
         <div className="text-center">
-          <div className="text-gray-500 text-xl mb-4">🔒 Authentication Required</div>
+          <div className="text-gray-500 text лично-xl mb-4">🔒 Authentication Required</div>
           <p className="text-gray-600">Please log in to access the dashboard.</p>
         </div>
       </div>
@@ -210,7 +230,33 @@ const RecyclerDashboard = () => {
 
   return (
     <div className="space-y-6">
-      {/* Stats Overview */}
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title="Document Links"
+      >
+        {modalContent.length > 0 ? (
+          <ul className="space-y-2">
+            {modalContent.map((doc, index) => (
+              <li key={doc.id} className="flex items-center gap-2">
+                <span className="text-sm text-gray-600">{index + 1}.</span>
+                <a
+                  href={doc.url}
+                  target="_blank"
+                  rel="noopener noreferre
+r"
+                  className="text-blue-600 hover:underline"
+                >
+                  {doc.originalName}
+                </a>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-gray-600">No documents available.</p>
+        )}
+      </Modal>
+
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="pb-2">
@@ -238,7 +284,6 @@ const RecyclerDashboard = () => {
         </Card>
       </div>
 
-      {/* Quick Actions */}
       <Card>
         <CardHeader>
           <CardTitle>Quick Actions</CardTitle>
@@ -265,7 +310,6 @@ const RecyclerDashboard = () => {
         </CardContent>
       </Card>
 
-      {/* Available Bids */}
       <Card>
         <CardHeader>
           <CardTitle>Available Waste Bids</CardTitle>
@@ -283,7 +327,7 @@ const RecyclerDashboard = () => {
                 return (
                   <div key={bid.id} className="border rounded-lg p-4 hover:bg-gray-50">
                     <div className="flex justify-between items-start mb-3">
-                      <div className="flex-1">
+                        <div className="flex-1">
                         <h3 className="font-semibold text-lg">{bid.lotName || 'Unnamed Lot'}</h3>
                         <p className="text-sm text-gray-600 mb-2">{bid.description || 'No description'}</p>
                         <div className="flex flex-wrap gap-2 text-sm text-gray-500">
@@ -325,7 +369,6 @@ const RecyclerDashboard = () => {
                       </div>
 
                       <div className="flex gap-2">
-                       
                         <Button
                           variant="outline"
                           size="sm"
@@ -366,7 +409,6 @@ const RecyclerDashboard = () => {
         </CardContent>
       </Card>
 
-      {/* My Participations */}
       {myParticipations.length > 0 && (
         <Card>
           <CardHeader>
