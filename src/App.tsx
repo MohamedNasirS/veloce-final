@@ -60,6 +60,12 @@ const App = () => (
                 <Layout><LiveBids /></Layout>
               </ProtectedRoute>
             } />
+            {/* Protected public pages */}
+            <Route path="/live-bids" element={
+              <ProtectedRoute>
+                <Layout><LiveBids /></Layout>
+              </ProtectedRoute>
+            } />
             <Route path="/closed-bids" element={
               <ProtectedRoute>
                 <Layout><ClosedBids /></Layout>
