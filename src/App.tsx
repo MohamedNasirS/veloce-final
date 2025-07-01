@@ -106,14 +106,17 @@ const App = () => (
                   <MyBids />
                 </ProtectedRoute>
               } />
-              <Route path="waste_generator/select-winner/:bidId" element={
+
+              <Route path="waste-generator/select-winner" element={
                 <ProtectedRoute allowedRoles={['waste_generator']}>
                   <SelectWinner />
                 </ProtectedRoute>
               } />
-              <Route path="waste_generator/select-venue/:bidId" element={
+
+              <Route path="waste-generator/select-winner/:bidId" element={
                 <ProtectedRoute allowedRoles={['waste_generator']}>
-                  <SelectVenue />
+
+                  <SelectWinner />
                 </ProtectedRoute>
               } />
               <Route path="waste_generator/gate-passes" element={
