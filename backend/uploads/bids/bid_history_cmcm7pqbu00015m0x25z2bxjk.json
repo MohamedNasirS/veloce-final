@@ -1,0 +1,15 @@
+{
+  "bidId": "cmcm7pqbu00015m0x25z2bxjk",
+  "bids": [
+    {
+      "userId": null,
+      "amount": 90,
+      "timestamp": "2025-07-02T17:10:12.149Z"
+    },
+    {
+      "userId": "cmcaofjku0009970vnvmkmrju",
+      "amount": 200,
+      "timestamp": "2025-07-02T17:13:46.787Z"
+    }
+  ]
+}

@@ -12,8 +12,7 @@ interface BidEntry {
   userId: string | null;
   amount: number;
   timestamp: string;
-  bidderName?: string;
-  rank?: number;
+  user?: { id: string; name: string; email: string }; // Optional user details from /users/:id
 }
 
 interface Bid {
@@ -32,14 +31,18 @@ interface Bid {
 const SelectWinner = () => {
   const { bidId } = useParams<{ bidId: string }>();
   const [bid, setBid] = useState<Bid | null>(null);
-  const [selectedWinner, setSelectedWinner] = useState('');
+  const [selectedWinner, setSelectedWinner] = useState<string>('');
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (bidId) {
+      console.log('Fetching details for bidId:', bidId); // Debug: Log bidId
       fetchBidDetails();
+    } else {
+      setError('Invalid bid ID');
+      setLoading(false);
     }
   }, [bidId]);
 
@@ -47,46 +50,87 @@ const SelectWinner = () => {
     try {
       // Fetch bid details from /bids/:id
       const bidResponse = await fetch(`http://localhost:3001/api/bids/${bidId}`);
-      if (!bidResponse.ok) throw new Error('Failed to fetch bid details');
+      if (!bidResponse.ok) {
+        throw new Error(`Failed to fetch bid details: ${bidResponse.status} ${bidResponse.statusText}`);
+      }
       const bidData = await bidResponse.json();
+      console.log('Fetched bid details:', bidData); // Debug: Log bid response
 
       // Fetch bidding history from /bids/:id/history
       const historyResponse = await fetch(`http://localhost:3001/api/bids/${bidId}/history`);
-      if (!historyResponse.ok) throw new Error('Failed to fetch bidding history');
-      const historyData = await historyResponse.json();
+      let historyData = { bids: [] };
+      if (historyResponse.ok) {
+        historyData = await historyResponse.json();
+        console.log('Fetched bidding history:', historyData); // Debug: Log history response
+      } else {
+        console.warn(`Bidding history fetch failed: ${historyResponse.status} ${historyResponse.statusText}`);
+      }
 
-      // Combine bid details with history, adding ranks based on amount
-      const sortedBids = historyData.bids
-        .map((entry: BidEntry, index: number) => ({
-          ...entry,
-          bidderName: entry.userId ? `User ${entry.userId.slice(0, 8)}` : 'Base Price',
-          rank: entry.userId ? index + 1 : undefined,
-        }))
-        .sort((a: BidEntry, b: BidEntry) => b.amount - a.amount);
+      // Handle empty or missing bidding history
+      const bids = Array.isArray(historyData.bids) ? historyData.bids : [];
+      if (bids.length === 0) {
+        console.warn('No bidding history found for bid:', bidId);
+      }
+
+      // Fetch user details for each bid entry and add ranks
+      const sortedBids = await Promise.all(
+        bids
+          .sort((a: BidEntry, b: BidEntry) => b.amount - a.amount)
+          .map(async (entry: BidEntry, index: number) => {
+            let bidderName = entry.userId ? `User ${entry.userId.slice(0, 8)}` : 'Base Price';
+            if (entry.userId) {
+              try {
+                const userResponse = await fetch(`http://localhost:3001/api/users/${entry.userId}`);
+                if (userResponse.ok) {
+                  const userData = await userResponse.json();
+                  bidderName = userData.name || `User ${entry.userId.slice(0, 8)}`;
+                  entry.user = userData; // Attach user details
+                } else {
+                  console.warn(`Failed to fetch user ${entry.userId}: ${userResponse.status}`);
+                }
+              } catch (userErr) {
+                console.warn(`Error fetching user ${entry.userId}:`, userErr);
+              }
+            }
+            return {
+              ...entry,
+              bidderName,
+              rank: entry.userId ? index + 1 : undefined,
+            };
+          })
+      );
 
       setBid({
         ...bidData,
         bids: sortedBids,
       });
-    } catch (err) {
-      setError('Bid or bidding history not found');
-      console.error('Error fetching bid:', err);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load bid or bidding history');
+      console.error('Error fetching bid details:', err);
     } finally {
       setLoading(false);
     }
   };
 
   const handleSelectWinner = async () => {
-    if (!selectedWinner) return;
+    if (!selectedWinner) {
+      toast({
+        title: 'Error',
+        description: 'Please select a bidder before confirming.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     try {
-      // Update bid with winner (you may need a backend endpoint for this)
       const response = await fetch(`http://localhost:3001/api/bids/${bidId}/select-winner`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ winnerId: selectedWinner }),
       });
-      if (!response.ok) throw new Error('Failed to select winner');
+      if (!response.ok) {
+        throw new Error(`Failed to select winner: ${response.status} ${response.statusText}`);
+      }
 
       // Update local state
       setBid((prev) =>
@@ -105,10 +149,10 @@ const SelectWinner = () => {
         title: 'Winner Selected',
         description: 'The winner has been selected successfully. You can now proceed with venue selection.',
       });
-    } catch (err) {
+    } catch (err: any) {
       toast({
         title: 'Error',
-        description: 'Failed to select winner. Please try again.',
+        description: err.message || 'Failed to select winner. Please try again.',
         variant: 'destructive',
       });
     }
@@ -119,7 +163,7 @@ const SelectWinner = () => {
   }
 
   if (error || !bid) {
-    return <div>Bid not found</div>;
+    return <div>{error || 'Bid not found'}</div>;
   }
 
   const currentWinner = bid.bids.find((b) => b.rank === 1);
@@ -146,7 +190,7 @@ const SelectWinner = () => {
                   <span className="font-medium">Location:</span> {bid.location}
                 </p>
                 <p>
-                  <span className="font-medium">Base Price:</span> ${bid.basePrice.toLocaleString()}
+                  <span className="font-medium">Base Price:</span> ₹{bid.basePrice.toLocaleString()}
                 </p>
               </div>
             </div>
@@ -161,7 +205,7 @@ const SelectWinner = () => {
                   <span className="font-medium">Total Bids:</span> {bid.bids.length}
                 </p>
                 <p>
-                  <span className="font-medium">Highest Bid:</span> ${bid.currentPrice.toLocaleString()}
+                  <span className="font-medium">Highest Bid:</span> ₹{bid.currentPrice.toLocaleString()}
                 </p>
                 {currentWinner && (
                   <p>
@@ -174,28 +218,29 @@ const SelectWinner = () => {
 
           <div className="space-y-4">
             <h3 className="font-semibold">Select Winner from Bidders</h3>
-            <RadioGroup value={selectedWinner} onValueChange={setSelectedWinner}>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12">Select</TableHead>
-                    <TableHead>Bidder Name</TableHead>
-                    <TableHead>Bid Amount</TableHead>
-                    <TableHead>Current Rank</TableHead>
-                    <TableHead>Bid Time</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {bid.bids
-                    .filter((entry) => entry.userId) // Exclude base price
-                    .map((bidEntry) => (
-                      <TableRow key={bidEntry.userId} className={bidEntry.rank === 1 ? 'bg-green-50' : ''}>
+            {bid.bids.length === 0 ? (
+              <p className="text-gray-600">No bids available for this lot.</p>
+            ) : (
+              <RadioGroup value={selectedWinner} onValueChange={setSelectedWinner}>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12">Select</TableHead>
+                      <TableHead>Bidder Name</TableHead>
+                      <TableHead>Bid Amount</TableHead>
+                      <TableHead>Current Rank</TableHead>
+                      <TableHead>Bid Time</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {bid.bids.map((bidEntry) => (
+                      <TableRow key={bidEntry.userId || bidEntry.timestamp} className={bidEntry.rank === 1 ? 'bg-green-50' : ''}>
                         <TableCell>
-                          <RadioGroupItem value={bidEntry.userId!} id={bidEntry.userId!} />
+                          {bidEntry.userId && <RadioGroupItem value={bidEntry.userId} id={bidEntry.userId} />}
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <Label htmlFor={bidEntry.userId!} className="font-medium">
+                            <Label htmlFor={bidEntry.userId || ''} className="font-medium">
                               {bidEntry.bidderName}
                             </Label>
                             {bidEntry.rank === 1 && (
@@ -203,21 +248,22 @@ const SelectWinner = () => {
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="font-semibold">${bidEntry.amount.toLocaleString()}</TableCell>
+                        <TableCell className="font-semibold">₹{bidEntry.amount.toLocaleString()}</TableCell>
                         <TableCell>
-                          <Badge variant="outline">#{bidEntry.rank}</Badge>
+                          {bidEntry.rank && <Badge variant="outline">#{bidEntry.rank}</Badge>}
                         </TableCell>
                         <TableCell className="text-sm text-gray-600">
                           {new Date(bidEntry.timestamp).toLocaleString()}
                         </TableCell>
                       </TableRow>
                     ))}
-                </TableBody>
-              </Table>
-            </RadioGroup>
+                  </TableBody>
+                </Table>
+              </RadioGroup>
+            )}
 
             <div className="flex gap-4 pt-4">
-              <Button onClick={handleSelectWinner} disabled={!selectedWinner} className="w-full md:w-auto">
+              <Button onClick={handleSelectWinner} disabled={!selectedWinner || bid.bids.length === 0} className="w-full md:w-auto">
                 Confirm Winner Selection
               </Button>
               <Button variant="outline" className="w-full md:w-auto">

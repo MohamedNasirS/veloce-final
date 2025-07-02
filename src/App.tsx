@@ -11,7 +11,6 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 
-
 // Pages
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
@@ -60,12 +59,6 @@ const App = () => (
                 <Layout><LiveBids /></Layout>
               </ProtectedRoute>
             } />
-            {/* Protected public pages */}
-            <Route path="/live-bids" element={
-              <ProtectedRoute>
-                <Layout><LiveBids /></Layout>
-              </ProtectedRoute>
-            } />
             <Route path="/closed-bids" element={
               <ProtectedRoute>
                 <Layout><ClosedBids /></Layout>
@@ -84,7 +77,7 @@ const App = () => (
               </ProtectedRoute>
             } />
 
-            {/* Dashboard routes - Fixed structure */}
+            {/* Dashboard routes */}
             <Route path="/dashboard" element={
               <ProtectedRoute>
                 <DashboardLayout />
@@ -106,17 +99,17 @@ const App = () => (
                   <MyBids />
                 </ProtectedRoute>
               } />
-
-              <Route path="waste-generator/select-winner" element={
+              <Route path="waste_generator/select-winner/:bidId" element={
                 <ProtectedRoute allowedRoles={['waste_generator']}>
-                  <SelectWinner />
+                  <div>
+                    {console.log('SelectWinner route matched for waste_generator')}
+                    <SelectWinner />
+                  </div>
                 </ProtectedRoute>
               } />
-
-              <Route path="waste-generator/select-winner/:bidId" element={
+              <Route path="waste_generator/select-venue/:bidId" element={
                 <ProtectedRoute allowedRoles={['waste_generator']}>
-
-                  <SelectWinner />
+                  <SelectVenue />
                 </ProtectedRoute>
               } />
               <Route path="waste_generator/gate-passes" element={
@@ -136,7 +129,7 @@ const App = () => (
                 </ProtectedRoute>
               } />
 
-              {/* Recycler Dashboard - Fixed */}
+              {/* Recycler Dashboard */}
               <Route path="recycler" element={
                 <ProtectedRoute allowedRoles={['recycler']}>
                   <RecyclerDashboard />
