@@ -6,6 +6,18 @@ import { Badge } from '../../components/ui/badge';
 import { useAuth } from '../../contexts/AuthContext';
 import axios from 'axios';
 
+interface BidParticipant {
+  id: string;
+  userId: string;
+  amount: number;
+  createdAt: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+  };
+}
+
 interface WasteBid {
   id: string;
   lotName: string;
@@ -17,30 +29,22 @@ interface WasteBid {
   basePrice: number;
   currentPrice: number;
   status: string;
-  _count: {
-    bidEntries: number;
-  };
+  participants: BidParticipant[];
 }
 
-interface BidParticipant {
-  id: string;
-  bidId: string;
-  userId: string;
+interface BidHistoryEntry {
+  userId: string | null;
   amount: number;
-  createdAt: string;
-  user: {
+  timestamp: string;
+  user?: {
     id: string;
     name: string;
     email: string;
   };
-  bid: {
-    lotName: string;
-    currentPrice: number;
-  };
 }
 
 const BiddingHistory: React.FC<{ bidId: string }> = ({ bidId }) => {
-  const [bids, setBids] = useState<BidParticipant[]>([]);
+  const [bids, setBids] = useState<BidHistoryEntry[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,7 +52,21 @@ const BiddingHistory: React.FC<{ bidId: string }> = ({ bidId }) => {
     const fetchBiddingHistory = async () => {
       try {
         const response = await axios.get(`http://localhost:3001/api/bids/${bidId}/history`);
-        setBids(response.data);
+        // Fetch user details for each bid entry with a userId
+        const bidsWithUser = await Promise.all(
+          response.data.bids.map(async (entry: BidHistoryEntry) => {
+            if (entry.userId) {
+              try {
+                const userResponse = await axios.get(`http://localhost:3001/api/users/${entry.userId}`);
+                return { ...entry, user: userResponse.data };
+              } catch (userErr) {
+                return { ...entry, user: { id: entry.userId, name: 'Unknown User', email: 'N/A' } };
+              }
+            }
+            return { ...entry, user: null };
+          })
+        );
+        setBids(bidsWithUser);
         setLoading(false);
       } catch (err) {
         setError('Failed to load bidding history');
@@ -63,7 +81,7 @@ const BiddingHistory: React.FC<{ bidId: string }> = ({ bidId }) => {
 
   return (
     <div className="mt-4">
-      <h3 className="text-lg font-semibold">Bidding History for {bids[0]?.bid.lotName}</h3>
+      <h3 className="text-lg font-semibold">Bidding History for {bids[0]?.user?.name ? bids[0].user.name : 'Bid'}</h3>
       <table className="w-full border-collapse mt-2">
         <thead>
           <tr>
@@ -73,15 +91,17 @@ const BiddingHistory: React.FC<{ bidId: string }> = ({ bidId }) => {
           </tr>
         </thead>
         <tbody>
-          {bids.map((bid) => (
-            <tr key={bid.id}>
-              <td className="border p-2">{bid.user.name}</td>
-              <td className="border p-2">{bid.amount.toFixed(2)}</td>
-              <td className="border p-2">
-                {new Date(bid.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
-              </td>
-            </tr>
-          ))}
+          {bids
+            .filter((bid) => bid.userId) // Exclude base price entry
+            .map((bid) => (
+              <tr key={bid.userId || bid.timestamp}>
+                <td className="border p-2">{bid.user?.name || 'Unknown'}</td>
+                <td className="border p-2">{bid.amount.toFixed(2)}</td>
+                <td className="border p-2">
+                  {new Date(bid.timestamp).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
+                </td>
+              </tr>
+            ))}
         </tbody>
       </table>
     </div>
@@ -102,7 +122,7 @@ const WasteGeneratorDashboard: React.FC = () => {
 
   const fetchUserBids = async () => {
     try {
-      const response = await fetch(`http://localhost:3001/api/bids/user/${user?.id}`);
+      const response = await fetch(`http://localhost:3001/api/bids/creator/${user?.id}`);
       if (response.ok) {
         const data = await response.json();
         setBids(data);
@@ -114,17 +134,17 @@ const WasteGeneratorDashboard: React.FC = () => {
     }
   };
 
-  const activeBids = bids.filter((bid) => bid.status === 'in-progress' || bid.status === 'published');
-  const closedBids = bids.filter((bid) => bid.status === 'closed');
+  const activeBids = bids.filter((bid) => bid.status === 'APPROVED' || bid.status === 'LIVE');
+  const closedBids = bids.filter((bid) => bid.status === 'CLOSED');
   const totalRevenue = closedBids.reduce((sum, bid) => sum + bid.currentPrice, 0);
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'published':
+      case 'APPROVED':
         return 'bg-blue-100 text-blue-800';
-      case 'in-progress':
+      case 'LIVE':
         return 'bg-orange-100 text-orange-800';
-      case 'closed':
+      case 'CLOSED':
         return 'bg-green-100 text-green-800';
       default:
         return 'bg-gray-100 text-gray-800';
@@ -133,11 +153,11 @@ const WasteGeneratorDashboard: React.FC = () => {
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case 'published':
-        return 'Published';
-      case 'in-progress':
+      case 'APPROVED':
+        return 'Approved';
+      case 'LIVE':
         return 'Active';
-      case 'closed':
+      case 'CLOSED':
         return 'Closed';
       default:
         return status;
@@ -224,12 +244,19 @@ const WasteGeneratorDashboard: React.FC = () => {
                     {bid.location} • {bid.quantity} {bid.unit}
                   </p>
                 </div>
-                <div className="text-right">
+                <div className="text-right space-y-1">
                   <Badge variant="secondary" className={getStatusColor(bid.status)}>
                     {getStatusLabel(bid.status)}
                   </Badge>
-                  <p className="text-lg font-semibold mt-1">₹{bid.currentPrice.toLocaleString()}</p>
-                  <p className="text-sm text-gray-500">{bid._count.bidEntries} bid(s)</p>
+                  <p className="text-lg font-semibold">₹{bid.currentPrice.toLocaleString()}</p>
+                  <p className="text-sm text-gray-500">{bid.participants.length} bid(s)</p>
+                  {bid.status === 'CLOSED' && (
+                    <Link to={`/dashboard/waste_generator/select-winner/${bid.id}`}>
+                      <Button variant="outline" size="sm">
+                        Select Winner
+                      </Button>
+                    </Link>
+                  )}
                 </div>
               </div>
             ))}

@@ -5,6 +5,8 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBidDto } from './dto/create-bid.dto';
+import * as fs from 'fs/promises';
+import * as path from 'path';
 
 @Injectable()
 export class BidsService {
@@ -30,6 +32,24 @@ export class BidsService {
         path: `/uploads/bids/${file.filename}`,
       })),
     });
+
+    // Ensure the uploads/bids directory exists
+    const uploadsDir = path.join(process.cwd(), 'uploads', 'bids');
+    await fs.mkdir(uploadsDir, { recursive: true });
+
+    // Create JSON file for bidding history
+    const bidHistory = {
+      bidId: bid.id,
+      bids: [
+        {
+          userId: null,
+          amount: parseFloat(dto.basePrice),
+          timestamp: new Date().toISOString(),
+        },
+      ],
+    };
+    const historyFilePath = path.join(uploadsDir, `bid_history_${bid.id}.json`);
+    await fs.writeFile(historyFilePath, JSON.stringify(bidHistory, null, 2));
 
     return { message: 'Bid created and pending admin approval', bid };
   }
@@ -82,6 +102,36 @@ export class BidsService {
       where: { id: bidId },
       data: { currentPrice: amount },
     });
+
+    // Ensure the uploads/bids directory exists
+    const uploadsDir = path.join(process.cwd(), 'uploads', 'bids');
+    await fs.mkdir(uploadsDir, { recursive: true });
+
+    // Update JSON file with new bid
+    const historyFilePath = path.join(uploadsDir, `bid_history_${bidId}.json`);
+    try {
+      const fileContent = await fs.readFile(historyFilePath, 'utf-8');
+      const bidHistory = JSON.parse(fileContent);
+      bidHistory.bids.push({
+        userId,
+        amount,
+        timestamp: new Date().toISOString(),
+      });
+      await fs.writeFile(historyFilePath, JSON.stringify(bidHistory, null, 2));
+    } catch (error) {
+      // If file doesn't exist, create a new one
+      const bidHistory = {
+        bidId,
+        bids: [
+          {
+            userId,
+            amount,
+            timestamp: new Date().toISOString(),
+          },
+        ],
+      };
+      await fs.writeFile(historyFilePath, JSON.stringify(bidHistory, null, 2));
+    }
 
     return { message: 'Bid placed successfully' };
   }

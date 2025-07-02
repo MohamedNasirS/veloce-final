@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -22,7 +21,6 @@ const DashboardLayout = () => {
           { label: 'Dashboard', path: '/dashboard/waste_generator', icon: '🏠' },
           { label: 'Create Bid', path: '/dashboard/waste_generator/create-bid', icon: '➕' },
           { label: 'My Bids', path: '/dashboard/waste_generator/my-bids', icon: '📋' },
-          { label: 'Select Winner', path: '/dashboard/waste_generator/select-winner', icon: '🏆' },
           { label: 'Gate Passes', path: '/dashboard/waste_generator/gate-passes', icon: '🎫' },
         ];
       case 'recycler':
@@ -58,7 +56,7 @@ const DashboardLayout = () => {
             {sidebarOpen && (
               <div>
                 <h2 className="text-lg font-semibold capitalize">
-                  {user?.role?.replace('-', ' ')} Dashboard
+                  {user?.role?.replace('_', ' ')} Dashboard
                 </h2>
                 <p className="text-sm text-gray-600">{user?.name}</p>
               </div>
