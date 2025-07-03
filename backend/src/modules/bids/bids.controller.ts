@@ -1,19 +1,11 @@
-import {
-  Controller,
-  Post,
-  Body,
-  UseInterceptors,
-  UploadedFiles,
-  Get,
-  Patch,
-  Param,
-} from '@nestjs/common';
+import { Controller, Post, Body, UseInterceptors, UploadedFiles, Get, Patch, Param } from '@nestjs/common';
 import { BidsService } from './bids.service';
 import { CreateBidDto } from './dto/create-bid.dto';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import { BidHistory } from './types';
 
 @Controller('bids')
 export class BidsController {
@@ -79,6 +71,16 @@ export class BidsController {
   @Get(':id')
   getBidById(@Param('id') bidId: string) {
     return this.bidsService.getBidById(bidId);
+  }
+
+  @Get(':id/history')
+  getBiddingHistory(@Param('id') bidId: string): Promise<BidHistory> {
+    return this.bidsService.getBiddingHistory(bidId);
+  }
+
+  @Patch(':id/select-winner')
+  selectWinner(@Param('id') bidId: string, @Body() body: { winnerId: string }) {
+    return this.bidsService.selectWinner(bidId, body.winnerId);
   }
 
   @Get('refresh-status')

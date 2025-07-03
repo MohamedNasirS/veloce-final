@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Badge } from '../components/ui/badge';
 import { RefreshCw } from 'lucide-react';
 import { useCountdown } from '../hooks/useMockData';
+import { useToast } from '../hooks/use-toast';
 
 const CountdownTimer: React.FC<{ endDate: string }> = ({ endDate }) => {
   const timeLeft = useCountdown(endDate);
@@ -18,37 +19,100 @@ const LiveBids = () => {
   const [selectedBid, setSelectedBid] = useState<any | null>(null);
   const [bidAmount, setBidAmount] = useState('');
   const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
 
-  const fetchLiveBids = () => {
+  const fetchLiveBids = async () => {
     setLoading(true);
-    axios.get('http://localhost:3001/api/bids/approved')
-      .then(res => setBids(res.data.filter((b: any) => b.status === 'LIVE')))
-      .catch(err => console.error('Failed to fetch live bids', err))
-      .finally(() => setLoading(false));
+    try {
+      const res = await axios.get('http://localhost:3001/api/bids/approved');
+      setBids(res.data.filter((b: any) => b.status === 'LIVE'));
+    } catch (err) {
+      console.error('Failed to fetch live bids', err);
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch live bids. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     fetchLiveBids();
   }, []);
 
-  const handleBidSubmit = async () => {
-    if (!selectedBid || !bidAmount || !user) return;
+  const refreshBidData = async (bidId: string) => {
     try {
-      await axios.patch(`http://localhost:3001/api/bids/${selectedBid.id}/bid`, {
+      const res = await axios.get(`http://localhost:3001/api/bids/${bidId}`);
+      return res.data;
+    } catch (err) {
+      console.error('Failed to refresh bid data for bid:', bidId, err);
+      throw new Error('Failed to fetch latest bid data');
+    }
+  };
+
+  const handleBidSubmit = async () => {
+    if (!selectedBid || !bidAmount || !user) {
+      toast({
+        title: 'Error',
+        description: 'Please select a bid and enter a valid amount.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const amount = parseFloat(bidAmount);
+    if (isNaN(amount) || amount <= 0) {
+      toast({
+        title: 'Error',
+        description: 'Bid amount must be a positive number.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      // Refresh bid data to ensure currentPrice is up-to-date
+      const updatedBid = await refreshBidData(selectedBid.id);
+      if (amount <= updatedBid.currentPrice) {
+        toast({
+          title: 'Error',
+          description: `Bid amount must be higher than the current price of ₹${updatedBid.currentPrice}.`,
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      console.log('Submitting bid:', { bidId: selectedBid.id, userId: user.id, amount }); // Debug: Log payload
+      const response = await axios.patch(`http://localhost:3001/api/bids/${selectedBid.id}/bid`, {
         userId: user.id,
-        amount: parseFloat(bidAmount),
+        amount,
       });
       setSelectedBid(null);
       setBidAmount('');
-      fetchLiveBids();
-    } catch (err) {
-      console.error('Bid submission failed', err);
+      await fetchLiveBids();
+      toast({
+        title: 'Success',
+        description: response.data.message || 'Bid placed successfully.',
+      });
+    } catch (err: any) {
+      console.error('Bid submission failed:', {
+        message: err.response?.data?.message,
+        status: err.response?.status,
+        data: err.response?.data,
+      });
+      toast({
+        title: 'Error',
+        description: err.response?.data?.message || 'Failed to place bid. Please try again.',
+        variant: 'destructive',
+      });
     }
   };
 
   const getMyBidAmount = (bid: any) => {
     const my = bid.participants?.find((p: any) => p.userId === user?.id);
-    return my ? `$${my.amount}` : '-';
+    return my ? `₹${my.amount.toLocaleString()}` : '-';
   };
 
   return (
@@ -96,7 +160,7 @@ const LiveBids = () => {
                     <td>
                       <Badge className="bg-green-100 text-green-700">LIVE</Badge>
                     </td>
-                    <td className="text-right font-bold">${bid.currentPrice.toLocaleString()}</td>
+                    <td className="text-right font-bold">₹{bid.currentPrice.toLocaleString()}</td>
                     <td className="text-right">{getMyBidAmount(bid)}</td>
                     <td className="text-center">
                       {(user?.role === 'recycler' || user?.role === 'aggregator') && (
@@ -116,12 +180,13 @@ const LiveBids = () => {
           <div className="bg-white p-6 rounded shadow-md w-full max-w-md mx-4">
             <h2 className="text-lg font-bold mb-4">Place Bid for {selectedBid.lotName}</h2>
             <div className="mb-2 text-sm text-gray-600">
-              Current Highest Bid: ${selectedBid.currentPrice.toLocaleString()}
+              Current Highest Bid: ₹{selectedBid.currentPrice.toLocaleString()}
             </div>
             <input
               type="number"
               value={bidAmount}
               min={selectedBid.currentPrice + 1}
+              step="1"
               onChange={e => setBidAmount(e.target.value)}
               className="w-full border px-3 py-2 rounded mb-4"
               placeholder="Enter your bid amount"

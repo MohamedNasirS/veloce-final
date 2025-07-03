@@ -15,6 +15,27 @@
       "userId": "cmcm7vzab00045m0xtvghnolg",
       "amount": 1000,
       "timestamp": "2025-07-02T18:09:22.038Z"
+    },
+    {
+      "userId": "cmcaofjku0009970vnvmkmrju",
+      "amount": 2000,
+      "timestamp": "2025-07-03T02:56:19.131Z"
+    },
+    {
+      "userId": "cmcm7vzab00045m0xtvghnolg",
+      "amount": 3000,
+      "timestamp": "2025-07-03T02:56:47.736Z"
+    },
+    {
+      "userId": "cmcaofjku0009970vnvmkmrju",
+      "amount": 4000,
+      "timestamp": "2025-07-03T02:59:57.507Z"
+    },
+    {
+      "userId": "cmcm7vzab00045m0xtvghnolg",
+      "amount": 4500,
+      "timestamp": "2025-07-03T03:00:21.833Z"
     }
-  ]
+  ],
+  "winnerId": "cmcaofjku0009970vnvmkmrju"
 }

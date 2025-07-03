@@ -1,0 +1,36 @@
+{
+  "bidId": "cmcmxrhoa00011c0vjimqe0sw",
+  "bids": [
+    {
+      "userId": null,
+      "userName": null,
+      "amount": 999,
+      "timestamp": "2025-07-03T05:19:24.966Z"
+    },
+    {
+      "userId": "cmcm7vzab00045m0xtvghnolg",
+      "userName": "test",
+      "amount": 1000,
+      "timestamp": "2025-07-03T05:22:05.454Z"
+    },
+    {
+      "userId": "cmcaofjku0009970vnvmkmrju",
+      "userName": "iman",
+      "amount": 2000,
+      "timestamp": "2025-07-03T05:22:27.432Z"
+    },
+    {
+      "userId": "cmcm7vzab00045m0xtvghnolg",
+      "userName": "test",
+      "amount": 3000,
+      "timestamp": "2025-07-03T05:22:57.124Z"
+    },
+    {
+      "userId": "cmcaofjku0009970vnvmkmrju",
+      "userName": "iman",
+      "amount": 5000,
+      "timestamp": "2025-07-03T05:23:56.670Z"
+    }
+  ],
+  "winnerId": "cmcaofjku0009970vnvmkmrju"
+}
