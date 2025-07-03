@@ -33,6 +33,8 @@ import CreateBid from "./pages/dashboards/CreateBid";
 import MyBids from "./pages/dashboards/MyBids";
 import SelectWinner from "./pages/dashboards/SelectWinner";
 import SelectVenue from "./pages/dashboards/SelectVenue";
+import GatePass from "./pages/dashboards/GatePass";
+import GatePassList from "./pages/dashboards/GatePassList";
 
 // Recycler/Aggregator Pages
 import Participated from "./pages/dashboards/Participated";
@@ -114,18 +116,12 @@ const App = () => (
               } />
               <Route path="waste_generator/gate-passes" element={
                 <ProtectedRoute allowedRoles={['waste_generator']}>
-                  <div className="p-8 text-center">
-                    <h2 className="text-2xl font-semibold mb-4">Gate Passes</h2>
-                    <p className="text-gray-600">Gate pass management coming soon.</p>
-                  </div>
+                  <GatePassList />
                 </ProtectedRoute>
               } />
               <Route path="waste_generator/gate-passes/:bidId" element={
                 <ProtectedRoute allowedRoles={['waste_generator']}>
-                  <div className="p-8 text-center">
-                    <h2 className="text-2xl font-semibold mb-4">Generate Gate Pass</h2>
-                    <p className="text-gray-600">Gate pass generation coming soon.</p>
-                  </div>
+                  <GatePass />
                 </ProtectedRoute>
               } />
 
