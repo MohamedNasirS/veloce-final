@@ -79,6 +79,7 @@ model Bid {
   participants BidParticipant[]
   winnerId     String?
   winner       User?            @relation("BidWinner", fields: [winnerId], references: [id])
+  gatePassPath String?          // Field for gate pass
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
 }
