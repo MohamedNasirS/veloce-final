@@ -135,7 +135,7 @@ export class BidsService {
     }
 
     // Ensure the uploads/bids directory exists
-    const uploadsDir = path.join(process.cwd(), 'uploads', 'bids');
+    const uploadsDir = path.join(process.cwd(), 'Uploads', 'bids');
     try {
       await fs.mkdir(uploadsDir, { recursive: true });
       console.log('Uploads directory ensured:', uploadsDir);
@@ -236,8 +236,9 @@ export class BidsService {
       },
       include: {
         images: true,
-        creator: true,
-        participants: true,
+        creator: { select: { id: true, name: true, company: true } },
+        participants: { include: { user: { select: { id: true, name: true, company: true } } } },
+        winner: { select: { id: true, name: true, email: true, company: true } },
       },
     });
   }
@@ -245,7 +246,11 @@ export class BidsService {
   async getPendingBids() {
     return this.prisma.bid.findMany({
       where: { status: 'PENDING' },
-      include: { creator: true, images: true },
+      include: {
+        creator: { select: { id: true, name: true, company: true } },
+        images: true,
+        winner: { select: { id: true, name: true, email: true, company: true } },
+      },
     });
   }
 
@@ -254,7 +259,9 @@ export class BidsService {
       where: { creatorId: userId },
       include: {
         images: true,
-        participants: true,
+        creator: { select: { id: true, name: true, company: true } },
+        participants: { include: { user: { select: { id: true, name: true, company: true } } } },
+        winner: { select: { id: true, name: true, email: true, company: true } },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -265,11 +272,12 @@ export class BidsService {
       where: { id: bidId },
       include: {
         images: true,
-        creator: true,
+        creator: { select: { id: true, name: true, company: true } },
         participants: {
-          include: { user: true },
+          include: { user: { select: { id: true, name: true, company: true } } },
           orderBy: { amount: 'desc' },
         },
+        winner: { select: { id: true, name: true, email: true, company: true } },
       },
     });
 
@@ -281,15 +289,16 @@ export class BidsService {
     return this.prisma.bid.findMany({
       include: {
         images: true,
-        creator: true,
-        participants: true,
+        creator: { select: { id: true, name: true, company: true } },
+        participants: { include: { user: { select: { id: true, name: true, company: true } } } },
+        winner: { select: { id: true, name: true, email: true, company: true } },
       },
       orderBy: { createdAt: 'desc' },
     });
   }
 
   async getBiddingHistory(bidId: string): Promise<BidHistory> {
-    const uploadsDir = path.join(process.cwd(), 'uploads', 'bids');
+    const uploadsDir = path.join(process.cwd(), 'Uploads', 'bids');
     const historyFilePath = path.join(uploadsDir, `bid_history_${bidId}.json`);
     console.log('Attempting to read bidding history file:', historyFilePath);
 
@@ -332,7 +341,7 @@ export class BidsService {
     const bid = await this.prisma.bid.findUnique({ where: { id: bidId } });
     if (!bid) throw new NotFoundException('Bid not found');
 
-    const uploadsDir = path.join(process.cwd(), 'uploads', 'bids');
+    const uploadsDir = path.join(process.cwd(), 'Uploads', 'bids');
     const historyFilePath = path.join(uploadsDir, `bid_history_${bidId}.json`);
     console.log('Selecting winner:', { bidId, winnerId });
     try {

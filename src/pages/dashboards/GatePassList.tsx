@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { useToast } from '../../components/ui/use-toast';
 import { useAuth } from '../../contexts/AuthContext';
+import axios from 'axios';
 
 interface WasteBid {
   id: string;
@@ -33,68 +34,103 @@ interface BidWithGatePass extends WasteBid {
 const GatePassList: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [bids, setBids] = useState<BidWithGatePass[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('all');
 
   useEffect(() => {
+    if (!user) {
+      console.error('No user logged in, redirecting to login');
+      toast({
+        title: 'Unauthorized',
+        description: 'Please log in to view gate passes.',
+        variant: 'destructive',
+      });
+      navigate('/login');
+      return;
+    }
+
+    if (user.role !== 'waste_generator') {
+      console.error(`User role ${user.role} is not waste_generator`);
+      toast({
+        title: 'Unauthorized',
+        description: 'Only waste generators can view gate passes.',
+        variant: 'destructive',
+      });
+      navigate('/dashboard');
+      return;
+    }
+
     if (user?.id) {
       fetchClosedBidsWithWinners();
     }
-  }, [user]);
+  }, [user, navigate, toast]);
 
   const fetchClosedBidsWithWinners = async () => {
     try {
-      const response = await fetch(`http://localhost:3001/api/bids/creator/${user?.id}`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
-      
-      // Filter only closed bids that have winners selected
-      const closedBidsWithWinners = data.filter((bid: WasteBid) => 
-        bid.status === 'CLOSED' && bid.winnerId
+      console.log(`Fetching closed bids for creator ${user?.id}, token: ${user?.token}`);
+      const response = await axios.get(`http://localhost:3001/api/bids/creator/${user?.id}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': user?.token ? `Bearer ${user?.token}` : undefined,
+        },
+      });
+      console.log('Raw API response (closed bids):', response.data);
+
+      // Filter only closed bids with winners
+      const closedBidsWithWinners = response.data.filter((bid: WasteBid) => 
+        bid.status === 'CLOSED' && bid.winnerId && bid.winner
       );
-      
-      // Fetch winner details and gate pass status for each bid
+
+      // Fetch gate pass status for each bid
       const bidsWithDetails = await Promise.all(
         closedBidsWithWinners.map(async (bid: BidWithGatePass) => {
-          let updatedBid = { ...bid };
-          
-          // Fetch winner details
           try {
-            const winnerResponse = await fetch(`http://localhost:3001/api/users/${bid.winnerId}`);
-            if (winnerResponse.ok) {
-              const winnerData = await winnerResponse.json();
-              updatedBid.winner = winnerData;
-            }
-          } catch (error) {
-            console.error(`Error fetching winner for bid ${bid.id}:`, error);
+            console.log(`Fetching gate pass for bid ${bid.id}`);
+            const gatePassResponse = await axios.get(
+              `http://localhost:3001/api/bids/${bid.id}/gate-pass?userId=${user?.id}`,
+              {
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': user?.token ? `Bearer ${user?.token}` : undefined,
+                },
+              }
+            );
+            return { ...bid, gatePassPath: gatePassResponse.data.gatePassPath };
+          } catch (error: any) {
+            console.error(`Error fetching gate pass for bid ${bid.id}:`, {
+              status: error.response?.status,
+              data: error.response?.data,
+              message: error.message,
+            });
+            return { ...bid, gatePassPath: null };
           }
-          
-          // Fetch gate pass status
-          try {
-            const gatePassResponse = await fetch(`http://localhost:3001/api/bids/${bid.id}/gate-pass?userId=${user?.id}`);
-            if (gatePassResponse.ok) {
-              const { gatePassPath } = await gatePassResponse.json();
-              updatedBid.gatePassPath = gatePassPath;
-            }
-          } catch (error) {
-            console.error(`Error fetching gate pass for bid ${bid.id}:`, error);
-            updatedBid.gatePassPath = null;
-          }
-          
-          return updatedBid;
         })
       );
-      
+
       setBids(bidsWithDetails);
       console.log('Fetched closed bids with winners and gate pass status:', bidsWithDetails);
-    } catch (error) {
-      console.error('Error fetching closed bids:', error);
+
+      if (bidsWithDetails.length === 0) {
+        console.log('No closed bids with winners found for this user');
+        toast({
+          title: 'No Closed Bids',
+          description: 'No closed bids with winners found. Please select winners for closed bids.',
+          variant: 'default',
+        });
+      }
+    } catch (error: any) {
+      console.error('Error fetching closed bids:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message,
+      });
       toast({
         title: 'Error',
-        description: 'Failed to fetch closed bids.',
+        description: error.response?.status === 404
+          ? 'No bids found for this user. Please create or close bids with winners.'
+          : `Failed to fetch closed bids: ${error.response?.data?.message || error.message}`,
         variant: 'destructive',
       });
     } finally {
@@ -173,7 +209,7 @@ const GatePassList: React.FC = () => {
               {[
                 { key: 'all', label: 'All' },
                 { key: 'pending', label: 'Pending' },
-                { key: 'completed', label: 'Completed' }
+                { key: 'completed', label: 'Completed' },
               ].map((status) => (
                 <Button
                   key={status.key}
