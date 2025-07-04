@@ -250,10 +250,10 @@ const WasteGeneratorDashboard: React.FC = () => {
                   </Badge>
                   <p className="text-lg font-semibold">₹{bid.currentPrice.toLocaleString()}</p>
                   <p className="text-sm text-gray-500">{bid.participants.length} bid(s)</p>
-                  {bid.status === 'CLOSED' && bid.winner && (
-                    <Link to={`/dashboard/waste_generator/gate-passes/${bid.id}`}>
+                  {bid.status === 'CLOSED' && (
+                    <Link to={`/dashboard/waste_generator/select-winner/${bid.id}`}>
                       <Button variant="outline" size="sm">
-                        Generate Gate Pass
+                         Select Winner
                       </Button>
                     </Link>
                   )}

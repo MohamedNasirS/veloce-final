@@ -6,7 +6,26 @@ import { Badge } from '../../components/ui/badge';
 import { Input } from '../../components/ui/input';
 import { useToast } from '../../components/ui/use-toast';
 import { useAuth } from '../../contexts/AuthContext';
-import { WasteBid } from '../../types';
+
+interface WasteBid {
+  id: string;
+  lotName: string;
+  description: string;
+  wasteType: string;
+  quantity: number;
+  unit: string;
+  location: string;
+  basePrice: number;
+  currentPrice: number;
+  status: string;
+  winnerId?: string;
+  winner?: {
+    id: string;
+    name: string;
+    email: string;
+    company?: string;
+  };
+}
 
 const GatePass: React.FC = () => {
   const { bidId } = useParams<{ bidId?: string }>();
@@ -28,21 +47,46 @@ const GatePass: React.FC = () => {
 
   const fetchBidDetails = async () => {
     try {
-      const response = await fetch(`http://localhost:3001/bids/${bidId}`);
+      const response = await fetch(`http://localhost:3001/api/bids/${bidId}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
+      
+      // Check if bid is closed and has a winner
       if (data.status !== 'CLOSED') {
         toast({
           title: 'Invalid Bid',
           description: 'Gate passes can only be managed for closed bids.',
           variant: 'destructive',
         });
+        navigate('/dashboard/waste_generator/gate-passes');
+        return;
+      }
+
+      if (!data.winnerId) {
+        toast({
+          title: 'No Winner Selected',
+          description: 'Please select a winner first from the main dashboard.',
+          variant: 'destructive',
+        });
         navigate('/dashboard/waste_generator');
         return;
       }
-      setBid(data);
+
+      // Fetch winner details
+      try {
+        const winnerResponse = await fetch(`http://localhost:3001/api/users/${data.winnerId}`);
+        if (winnerResponse.ok) {
+          const winnerData = await winnerResponse.json();
+          setBid({ ...data, winner: winnerData });
+        } else {
+          setBid(data);
+        }
+      } catch (error) {
+        console.error('Error fetching winner details:', error);
+        setBid(data);
+      }
     } catch (error) {
       console.error('Error fetching bid details:', error);
       toast({
@@ -55,7 +99,7 @@ const GatePass: React.FC = () => {
 
   const fetchGatePassStatus = async () => {
     try {
-      const response = await fetch(`http://localhost:3001/bids/${bidId}/gate-pass?userId=${user?.id}`);
+      const response = await fetch(`http://localhost:3001/api/bids/${bidId}/gate-pass?userId=${user?.id}`);
       if (response.ok) {
         const { gatePassPath } = await response.json();
         setGatePassPath(gatePassPath);
@@ -95,7 +139,7 @@ const GatePass: React.FC = () => {
     formData.append('userId', user!.id);
 
     try {
-      const response = await fetch(`http://localhost:3001/bids/${bidId}/gate-pass`, {
+      const response = await fetch(`http://localhost:3001/api/bids/${bidId}/gate-pass`, {
         method: 'POST',
         body: formData,
       });
@@ -111,7 +155,6 @@ const GatePass: React.FC = () => {
         title: 'Success',
         description: 'Gate pass uploaded successfully.',
       });
-      console.log('Gate pass uploaded:', { bidId, gatePassPath: result.gatePassPath });
     } catch (error: any) {
       console.error('Error uploading gate pass:', error);
       toast({
@@ -129,7 +172,6 @@ const GatePass: React.FC = () => {
     if (gatePassPath) {
       const fullUrl = `http://localhost:3001${gatePassPath}`;
       window.open(fullUrl, '_blank');
-      console.log('Viewing gate pass:', { bidId, gatePassPath, fullUrl });
     }
   };
 
@@ -142,7 +184,6 @@ const GatePass: React.FC = () => {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      console.log('Downloading gate pass:', { bidId, gatePassPath, fullUrl });
     }
   };
 
@@ -159,8 +200,8 @@ const GatePass: React.FC = () => {
     return (
       <div className="text-center p-8">
         <h2 className="text-2xl font-semibold mb-4">Bid Not Found</h2>
-        <Button onClick={() => navigate('/dashboard/waste_generator')}>
-          Back to Dashboard
+        <Button onClick={() => navigate('/dashboard/waste_generator/gate-passes')}>
+          Back to Gate Passes
         </Button>
       </div>
     );
@@ -170,8 +211,8 @@ const GatePass: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Gate Pass Management</h1>
-        <Button variant="outline" onClick={() => navigate('/dashboard/waste_generator')}>
-          Back to Dashboard
+        <Button variant="outline" onClick={() => navigate('/dashboard/waste_generator/gate-passes')}>
+          Back to Gate Passes
         </Button>
       </div>
 
@@ -204,36 +245,55 @@ const GatePass: React.FC = () => {
               <p className="font-semibold text-green-600">₹{(bid.currentPrice || 0).toLocaleString()}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-600">Winner</p>
-              <p className="font-semibold">{bid.winner?.name || 'Not selected'}</p>
-              {bid.winner?.company && (
-                <p className="text-sm text-gray-600">{bid.winner.company}</p>
-              )}
-              {bid.winner?.email && (
-                <p className="text-sm text-gray-600">{bid.winner.email}</p>
-              )}
+              <p className="text-sm text-gray-600">Status</p>
+              <Badge className="bg-green-100 text-green-800">Closed</Badge>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Gate Pass Section */}
+      {/* Winner Information */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Winner Information</CardTitle>
+          <CardDescription>Details of the winning bidder</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-gray-600">Winner Name</p>
+                <p className="font-semibold text-blue-900">{bid.winner?.name || 'Unknown'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Email</p>
+                <p className="font-semibold text-blue-900">{bid.winner?.email || 'N/A'}</p>
+              </div>
+              {bid.winner?.company && (
+                <div>
+                  <p className="text-sm text-gray-600">Company</p>
+                  <p className="font-semibold text-blue-900">{bid.winner.company}</p>
+                </div>
+              )}
+              <div>
+                <p className="text-sm text-gray-600">Winning Amount</p>
+                <p className="font-semibold text-green-600">₹{bid.currentPrice.toLocaleString()}</p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Gate Pass Management */}
       <Card>
         <CardHeader>
           <CardTitle>Gate Pass Management</CardTitle>
-          <CardDescription>Manage gate pass for the winning bidder</CardDescription>
+          <CardDescription>Upload and manage gate pass for the winner</CardDescription>
         </CardHeader>
         <CardContent>
-          {!bid.winner ? (
-            <div className="text-center py-8">
-              <p className="text-gray-600 mb-4">Please select a winner first before managing a gate pass.</p>
-              <Button onClick={() => navigate(`/dashboard/waste_generator/select-winner/${bid.id}`)}>
-                Select Winner
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {gatePassPath ? (
+          <div className="space-y-4">
+            {gatePassPath ? (
+              <div className="space-y-4">
                 <div className="flex items-center gap-3">
                   <Badge variant="secondary" className="bg-green-100 text-green-800">
                     ✅ Gate Pass Uploaded
@@ -252,52 +312,54 @@ const GatePass: React.FC = () => {
                   >
                     Download
                   </Button>
-                  <div className="ml-4">
-                    <label className="text-sm text-gray-600">
-                      Replace Gate Pass (PDF only):
-                      <Input
-                        type="file"
-                        accept="application/pdf"
-                        onChange={handleGatePassUpload}
-                        disabled={uploading}
-                        className="mt-1 w-auto"
-                      />
-                    </label>
-                  </div>
+                </div>
+                
+                <div className="border-t pt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Replace Gate Pass (PDF only):
+                  </label>
+                  <Input
+                    type="file"
+                    accept="application/pdf"
+                    onChange={handleGatePassUpload}
+                    disabled={uploading}
+                    className="w-full max-w-md"
+                  />
                   {uploading && (
-                    <div className="flex items-center gap-2 text-blue-600">
+                    <div className="flex items-center gap-2 text-blue-600 mt-2">
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
                       <span className="text-sm">Uploading...</span>
                     </div>
                   )}
                 </div>
-              ) : (
-                <div className="flex items-center gap-3">
-                  <Badge variant="secondary" className="bg-orange-100 text-orange-800">
-                    ⏳ Gate Pass Pending
-                  </Badge>
-                  <div>
-                    <label className="text-sm text-gray-600">
-                      Upload Gate Pass (PDF only):
-                      <Input
-                        type="file"
-                        accept="application/pdf"
-                        onChange={handleGatePassUpload}
-                        disabled={uploading}
-                        className="mt-1 w-auto"
-                      />
-                    </label>
-                  </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <Badge variant="secondary" className="bg-orange-100 text-orange-800">
+                  ⏳ Gate Pass Pending
+                </Badge>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Upload Gate Pass (PDF only):
+                  </label>
+                  <Input
+                    type="file"
+                    accept="application/pdf"
+                    onChange={handleGatePassUpload}
+                    disabled={uploading}
+                    className="w-full max-w-md"
+                  />
                   {uploading && (
-                    <div className="flex items-center gap-2 text-blue-600">
+                    <div className="flex items-center gap-2 text-blue-600 mt-2">
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
                       <span className="text-sm">Uploading...</span>
                     </div>
                   )}
                 </div>
-              )}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>

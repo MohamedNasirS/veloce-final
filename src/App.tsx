@@ -104,7 +104,7 @@ const App = () => (
               <Route path="waste_generator/select-winner/:bidId" element={
                 <ProtectedRoute allowedRoles={['waste_generator']}>
                   <div>
-                    {console.log('SelectWinner route matched for waste_generator')}
+                    {console.log('SelectWinner route matched for waste_generator, bidId:', window.location.pathname)}
                     <SelectWinner />
                   </div>
                 </ProtectedRoute>
@@ -237,6 +237,7 @@ const DashboardRedirect = () => {
 
   React.useEffect(() => {
     if (user) {
+      console.log('DashboardRedirect - User role:', user.role);
       switch (user.role) {
         case 'waste_generator':
           navigate('/dashboard/waste_generator', { replace: true });
@@ -251,8 +252,11 @@ const DashboardRedirect = () => {
           navigate('/dashboard/admin', { replace: true });
           break;
         default:
+          console.log('Unknown user role:', user.role);
           navigate('/', { replace: true });
       }
+    } else {
+      console.log('DashboardRedirect - No user found');
     }
   }, [user, navigate]);
 
