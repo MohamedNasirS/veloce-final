@@ -11,9 +11,9 @@ const AdminDashboard = () => {
   const [pendingBids, setPendingBids] = useState<any[]>([]);
 
   useEffect(() => {
-    axios.get('http://147.93.27.172/api/bids').then(res => setBids(res.data)).catch(console.error);
-    axios.get('http://147.93.27.172/api/users').then(res => setUsers(res.data)).catch(console.error);
-    axios.get('http://147.93.27.172/api/bids/pending').then(res => setPendingBids(res.data)).catch(console.error);
+    axios.get('http://147.93.27.172:3001/api/bids').then(res => setBids(res.data)).catch(console.error);
+    axios.get('http://147.93.27.172:3001/api/users').then(res => setUsers(res.data)).catch(console.error);
+    axios.get('http://147.93.27.172:3001/api/bids/pending').then(res => setPendingBids(res.data)).catch(console.error);
   }, []);
 
   const totalUsers = users.length;
