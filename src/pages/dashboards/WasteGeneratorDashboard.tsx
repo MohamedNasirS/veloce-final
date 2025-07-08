@@ -52,21 +52,7 @@ const BiddingHistory: React.FC<{ bidId: string }> = ({ bidId }) => {
     const fetchBiddingHistory = async () => {
       try {
         const response = await axios.get(`http://localhost:3001/api/bids/${bidId}/history`);
-        // Fetch user details for each bid entry with a userId
-        const bidsWithUser = await Promise.all(
-          response.data.bids.map(async (entry: BidHistoryEntry) => {
-            if (entry.userId) {
-              try {
-                const userResponse = await axios.get(`http://localhost:3001/api/users/${entry.userId}`);
-                return { ...entry, user: userResponse.data };
-              } catch (userErr) {
-                return { ...entry, user: { id: entry.userId, name: 'Unknown User', email: 'N/A' } };
-              }
-            }
-            return { ...entry, user: null };
-          })
-        );
-        setBids(bidsWithUser);
+        setBids(response.data.bids); // ✅ use directly
         setLoading(false);
       } catch (err) {
         setError('Failed to load bidding history');
@@ -81,7 +67,9 @@ const BiddingHistory: React.FC<{ bidId: string }> = ({ bidId }) => {
 
   return (
     <div className="mt-4">
-      <h3 className="text-lg font-semibold">Bidding History for {bids[0]?.user?.name ? bids[0].user.name : 'Bid'}</h3>
+      <h3 className="text-lg font-semibold">
+        Bidding History for {bids[0]?.userName || 'Bid'}
+      </h3>
       <table className="w-full border-collapse mt-2">
         <thead>
           <tr>
@@ -92,10 +80,10 @@ const BiddingHistory: React.FC<{ bidId: string }> = ({ bidId }) => {
         </thead>
         <tbody>
           {bids
-            .filter((bid) => bid.userId) // Exclude base price entry
+            .filter((bid) => bid.userId)
             .map((bid) => (
               <tr key={bid.userId || bid.timestamp}>
-                <td className="border p-2">{bid.user?.name || 'Unknown'}</td>
+                <td className="border p-2">{bid.userName || 'Unknown'}</td>
                 <td className="border p-2">{bid.amount.toFixed(2)}</td>
                 <td className="border p-2">
                   {new Date(bid.timestamp).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}

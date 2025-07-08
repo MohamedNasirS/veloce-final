@@ -253,33 +253,35 @@ async placeBid(bidId: string, userId: string, amount: number) {
       orderBy: { createdAt: 'desc' },
     });
   }
+async getBiddingHistory(bidId: string): Promise<BidHistory> {
+  const events = await this.prisma.bidEvent.findMany({
+    where: { bidId },
+    orderBy: { createdAt: 'asc' },
+    include: {
+      user: { select: { id: true, name: true } },
+    },
+  });
 
-  async getBiddingHistory(bidId: string): Promise<BidHistory> {
-    const events = await this.prisma.bidEvent.findMany({
-      where: { bidId },
-      orderBy: { createdAt: 'asc' },
-      include: {
-        user: { select: { id: true, name: true } },
-      },
-    });
+  const bids = events
+    .filter(event => event.type === BidEventType.BID_PLACED || event.type === BidEventType.BASE_PRICE)
+    .map(event => ({
+      userId: event.userId,
+      userName:
+        event.user?.name ??
+        (event.type === BidEventType.BASE_PRICE ? 'System' : 'Unknown'), // ✅ fallback label
+      amount: event.amount,
+      timestamp: event.createdAt.toISOString(),
+    }));
 
-    const bids = events
-      .filter(event => event.type === BidEventType.BID_PLACED || event.type === BidEventType.BASE_PRICE)
-      .map(event => ({
-        userId: event.userId,
-        userName: event.user?.name ?? (event.type === BidEventType.BASE_PRICE ? 'System' : null),
-        amount: event.amount,
-        timestamp: event.createdAt.toISOString(),
-      }));
+  const winnerEvent = events.find(event => event.type === BidEventType.WINNER_SELECTED);
 
-    const winnerEvent = events.find(event => event.type === BidEventType.WINNER_SELECTED);
+  return {
+    bidId,
+    bids,
+    winnerId: winnerEvent?.userId ?? null,
+  };
+}
 
-    return {
-      bidId,
-      bids,
-      winnerId: winnerEvent?.userId,
-    };
-  }
 
   async selectWinner(bidId: string, winnerId: string) {
     const bid = await this.prisma.bid.findUnique({ where: { id: bidId } });
