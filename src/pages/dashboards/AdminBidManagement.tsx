@@ -22,14 +22,14 @@ const AdminBidManagement = () => {
   const [filter, setFilter] = useState('ALL');
 
   useEffect(() => {
-    axios.get('http://localhost:3001/api/bids')
+    axios.get('http://147.93.27.172/api/bids')
       .then(res => setBids(res.data))
       .catch(err => console.error('Failed to load all bids', err));
   }, []);
 
   const handleApprove = async (bidId: string) => {
     try {
-      await axios.patch(`http://localhost:3001/api/bids/${bidId}/approve`);
+      await axios.patch(`http://147.93.27.172/api/bids/${bidId}/approve`);
       setBids(prev => prev.map(bid => bid.id === bidId ? { ...bid, status: 'APPROVED' } : bid));
       toast({ title: '✅ Bid Approved' });
     } catch {
@@ -39,7 +39,7 @@ const AdminBidManagement = () => {
 
   const handleCancel = async (bidId: string) => {
     try {
-      await axios.patch(`http://localhost:3001/api/bids/${bidId}/cancel`);
+      await axios.patch(`http://147.93.27.172/api/bids/${bidId}/cancel`);
       setBids(prev => prev.map(bid => bid.id === bidId ? { ...bid, status: 'CANCELLED' } : bid));
       toast({ title: '❌ Bid Cancelled', variant: 'destructive' });
     } catch {
@@ -108,7 +108,7 @@ const AdminBidManagement = () => {
                       {bid.images.map((img: any) => (
                         <img
                           key={img.id}
-                          src={`http://localhost:3001${img.path}`}
+                          src={`http://147.93.27.172${img.path}`}
                           className="w-10 h-10 rounded object-cover"
                         />
                       ))}
@@ -137,7 +137,7 @@ const AdminBidManagement = () => {
                             {bid.images.map((img: any) => (
                               <img
                                 key={img.id}
-                                src={`http://localhost:3001${img.path}`}
+                                src={`http://147.93.27.172${img.path}`}
                                 className="w-full rounded"
                               />
                             ))}

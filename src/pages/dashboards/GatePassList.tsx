@@ -70,7 +70,7 @@ const GatePassList: React.FC = () => {
   const fetchClosedBidsWithWinners = async () => {
     try {
       console.log(`Fetching closed bids for creator ${user?.id}, token: ${user?.token}`);
-      const response = await axios.get(`http://localhost:3001/api/bids/creator/${user?.id}`, {
+      const response = await axios.get(`http://147.93.27.172/api/bids/creator/${user?.id}`, {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': user?.token ? `Bearer ${user?.token}` : undefined,
@@ -89,7 +89,7 @@ const GatePassList: React.FC = () => {
           try {
             console.log(`Fetching gate pass for bid ${bid.id}`);
             const gatePassResponse = await axios.get(
-              `http://localhost:3001/api/bids/${bid.id}/gate-pass?userId=${user?.id}`,
+              `http://147.93.27.172/api/bids/${bid.id}/gate-pass?userId=${user?.id}`,
               {
                 headers: {
                   'Content-Type': 'application/json',

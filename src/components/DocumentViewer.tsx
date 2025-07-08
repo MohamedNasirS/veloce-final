@@ -44,8 +44,8 @@ const DocumentViewer: React.FC = () => {
       
       // Fetch documents and folder structure in parallel
       const [documentsResponse, folderResponse] = await Promise.all([
-        fetch(`http://localhost:3001/api/auth/documents/${user.id}`),
-        fetch(`http://localhost:3001/api/auth/folder/${user.id}`)
+        fetch(`http://147.93.27.172/api/auth/documents/${user.id}`),
+        fetch(`http://147.93.27.172/api/auth/folder/${user.id}`)
       ]);
 
       const documentsData = await documentsResponse.json();
@@ -62,7 +62,7 @@ const DocumentViewer: React.FC = () => {
 
   const downloadDocument = async (documentId: string, originalName: string) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/auth/documents/${user.id}/${documentId}`);
+      const response = await fetch(`http://147.93.27.172/api/auth/documents/${user.id}/${documentId}`);
       
       if (!response.ok) {
         throw new Error('Failed to download document');
