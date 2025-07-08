@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import axios from 'axios';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -21,6 +20,7 @@ const CreateBid = () => {
     startDate: '',
     endDate: '',
     basePrice: '',
+    minIncrementPercent: '',
     creatorId: localStorage.getItem('userId') || '',
   });
 
@@ -59,6 +59,7 @@ const CreateBid = () => {
       startDate: '',
       endDate: '',
       basePrice: '',
+      minIncrementPercent: '',
       creatorId: localStorage.getItem('userId') || '',
     });
     setImages([]);
@@ -160,12 +161,23 @@ const CreateBid = () => {
               </div>
 
               <div>
-                <Label htmlFor="basePrice">Base Price ($)</Label>
+                <Label htmlFor="basePrice">Base Price (₹)</Label>
                 <Input
                   id="basePrice"
                   type="number"
                   value={formData.basePrice}
                   onChange={(e) => handleChange('basePrice', e.target.value)}
+                  required
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="minIncrementPercent">Min Increment %</Label>
+                <Input
+                  id="minIncrementPercent"
+                  type="number"
+                  value={formData.minIncrementPercent || ''}
+                  onChange={(e) => handleChange('minIncrementPercent', e.target.value)}
                   required
                 />
               </div>
@@ -204,7 +216,6 @@ const CreateBid = () => {
               />
             </div>
 
-            {/* Image Upload Section */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <Label>Item Images (Optional)</Label>

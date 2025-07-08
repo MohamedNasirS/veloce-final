@@ -19,6 +19,7 @@ export interface WasteBid {
   unit: string;
   location: string;
   basePrice: number;
+  minIncrementPercent: number;
   currentPrice: number;
   status: string;
   endDate: string;

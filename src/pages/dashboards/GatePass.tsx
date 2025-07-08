@@ -48,12 +48,10 @@ const GatePass: React.FC = () => {
   const fetchBidDetails = async () => {
     try {
       const response = await fetch(`http://localhost:3001/api/bids/${bidId}`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
-      
-      // Check if bid is closed and has a winner
+
+      // Validate bid status and winner
       if (data.status !== 'CLOSED') {
         toast({
           title: 'Invalid Bid',
@@ -64,7 +62,7 @@ const GatePass: React.FC = () => {
         return;
       }
 
-      if (!data.winnerId) {
+      if (!data.winnerId || !data.winner) {
         toast({
           title: 'No Winner Selected',
           description: 'Please select a winner first from the main dashboard.',
@@ -74,19 +72,7 @@ const GatePass: React.FC = () => {
         return;
       }
 
-      // Fetch winner details
-      try {
-        const winnerResponse = await fetch(`http://localhost:3001/api/users/${data.winnerId}`);
-        if (winnerResponse.ok) {
-          const winnerData = await winnerResponse.json();
-          setBid({ ...data, winner: winnerData });
-        } else {
-          setBid(data);
-        }
-      } catch (error) {
-        console.error('Error fetching winner details:', error);
-        setBid(data);
-      }
+      setBid(data);
     } catch (error) {
       console.error('Error fetching bid details:', error);
       toast({
@@ -170,8 +156,7 @@ const GatePass: React.FC = () => {
 
   const handleViewGatePass = () => {
     if (gatePassPath) {
-      const fullUrl = `http://localhost:3001${gatePassPath}`;
-      window.open(fullUrl, '_blank');
+      window.open(`http://localhost:3001${gatePassPath}`, '_blank');
     }
   };
 
@@ -277,7 +262,7 @@ const GatePass: React.FC = () => {
               )}
               <div>
                 <p className="text-sm text-gray-600">Winning Amount</p>
-                <p className="font-semibold text-green-600">₹{bid.currentPrice.toLocaleString()}</p>
+                <p className="font-semibold text-green-600">₹{(bid.winnerAmount || 0).toLocaleString()}</p>
               </div>
             </div>
           </div>
@@ -298,22 +283,13 @@ const GatePass: React.FC = () => {
                   <Badge variant="secondary" className="bg-green-100 text-green-800">
                     ✅ Gate Pass Uploaded
                   </Badge>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleViewGatePass}
-                  >
+                  <Button variant="outline" size="sm" onClick={handleViewGatePass}>
                     View Gate Pass
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleDownloadGatePass}
-                  >
+                  <Button variant="outline" size="sm" onClick={handleDownloadGatePass}>
                     Download
                   </Button>
                 </div>
-                
                 <div className="border-t pt-4">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Replace Gate Pass (PDF only):
@@ -338,7 +314,6 @@ const GatePass: React.FC = () => {
                 <Badge variant="secondary" className="bg-orange-100 text-orange-800">
                   ⏳ Gate Pass Pending
                 </Badge>
-                
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Upload Gate Pass (PDF only):

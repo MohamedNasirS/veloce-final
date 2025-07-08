@@ -1,9 +1,14 @@
-import { Controller, Post, Body, UseInterceptors, UploadedFiles, Get, Patch, Param } from '@nestjs/common';
+import {
+  Controller, Post, Body, UseInterceptors, UploadedFiles, UploadedFile,
+  Get, Patch, Param, Query, BadRequestException, Res, Req, ForbiddenException, NotFoundException
+} from '@nestjs/common';
+import { Response, Request } from 'express';
 import { BidsService } from './bids.service';
 import { CreateBidDto } from './dto/create-bid.dto';
-import { FilesInterceptor } from '@nestjs/platform-express';
+import { FilesInterceptor, FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import * as path from 'path';
+import * as fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import { BidHistory } from './types';
 
@@ -87,4 +92,39 @@ export class BidsController {
   refreshStatuses() {
     return this.bidsService.refreshBidStatuses();
   }
+
+  // ✅ New Gate Pass Endpoints
+
+  @Get(':id/gate-pass')
+  async getGatePass(
+    @Param('id') bidId: string,
+    @Query('userId') userId: string,
+  ) {
+    return this.bidsService.getGatePass(bidId, userId);
+  }
+@Post(':id/gate-pass')
+@UseInterceptors(
+  FileInterceptor('gatePass', {
+    storage: diskStorage({
+      destination: './uploads/gatepasses',
+      filename: (req, file, cb) => {
+        const ext = path.extname(file.originalname);
+        cb(null, `${uuidv4()}${ext}`);
+      },
+    }),
+  }),
+)
+uploadGatePass(
+  @Param('id') bidId: string,
+  @UploadedFile() file: Express.Multer.File,
+  @Body('userId') userId: string,
+) {
+  return this.bidsService.uploadGatePass(bidId, userId, `/uploads/gatepasses/${file.filename}`);
+}
+
+@Get('participated/:userId')
+async getParticipatedBids(@Param('userId') userId: string) {
+  return this.bidsService.getParticipatedBids(userId);
+}
+
 }

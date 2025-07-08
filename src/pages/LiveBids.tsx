@@ -7,6 +7,9 @@ import { Badge } from '../components/ui/badge';
 import { RefreshCw } from 'lucide-react';
 import { useCountdown } from '../hooks/useMockData';
 import { useToast } from '../hooks/use-toast';
+import { io } from 'socket.io-client';
+
+const socket = io('http://localhost:3001');
 
 const CountdownTimer: React.FC<{ endDate: string }> = ({ endDate }) => {
   const timeLeft = useCountdown(endDate);
@@ -25,12 +28,12 @@ const LiveBids = () => {
     setLoading(true);
     try {
       const res = await axios.get('http://localhost:3001/api/bids/approved');
-      setBids(res.data.filter((b: any) => b.status === 'LIVE'));
+      const liveBids = res.data.filter((b: any) => b.status === 'LIVE');
+      setBids(liveBids);
     } catch (err) {
-      console.error('Failed to fetch live bids', err);
       toast({
         title: 'Error',
-        description: 'Failed to fetch live bids. Please try again.',
+        description: 'Failed to fetch live bids.',
         variant: 'destructive',
       });
     } finally {
@@ -40,71 +43,69 @@ const LiveBids = () => {
 
   useEffect(() => {
     fetchLiveBids();
+
+const handleBidUpdated = (updatedBid: any) => {
+  setBids(prev => {
+    // If bid is now CLOSED → remove it
+    if (updatedBid.status === 'CLOSED') {
+      return prev.filter(b => b.id !== updatedBid.id);
+    }
+
+    // If bid is already LIVE in list → update it
+    const exists = prev.find(b => b.id === updatedBid.id);
+    if (exists) {
+      return prev.map(b => (b.id === updatedBid.id ? updatedBid : b));
+    }
+
+    // If it's a new LIVE bid → add it
+    if (updatedBid.status === 'LIVE') {
+      return [...prev, updatedBid];
+    }
+
+    return prev;
+  });
+};
+
+
+    socket.on('bidUpdated', handleBidUpdated);
+
+    return () => {
+      socket.off('bidUpdated', handleBidUpdated);
+    };
   }, []);
 
-  const refreshBidData = async (bidId: string) => {
-    try {
-      const res = await axios.get(`http://localhost:3001/api/bids/${bidId}`);
-      return res.data;
-    } catch (err) {
-      console.error('Failed to refresh bid data for bid:', bidId, err);
-      throw new Error('Failed to fetch latest bid data');
-    }
-  };
-
   const handleBidSubmit = async () => {
-    if (!selectedBid || !bidAmount || !user) {
-      toast({
-        title: 'Error',
-        description: 'Please select a bid and enter a valid amount.',
-        variant: 'destructive',
-      });
-      return;
-    }
+    if (!selectedBid || !bidAmount || !user) return;
 
     const amount = parseFloat(bidAmount);
-    if (isNaN(amount) || amount <= 0) {
-      toast({
-        title: 'Error',
-        description: 'Bid amount must be a positive number.',
-        variant: 'destructive',
-      });
-      return;
-    }
+    if (isNaN(amount) || amount <= 0) return;
 
     try {
-      // Refresh bid data to ensure currentPrice is up-to-date
-      const updatedBid = await refreshBidData(selectedBid.id);
-      if (amount <= updatedBid.currentPrice) {
+      const updatedBid = await axios.get(`http://localhost:3001/api/bids/${selectedBid.id}`);
+      if (amount <= updatedBid.data.currentPrice) {
         toast({
           title: 'Error',
-          description: `Bid amount must be higher than the current price of ₹${updatedBid.currentPrice}.`,
+          description: 'Bid too low.',
           variant: 'destructive',
         });
         return;
       }
 
-      console.log('Submitting bid:', { bidId: selectedBid.id, userId: user.id, amount }); // Debug: Log payload
       const response = await axios.patch(`http://localhost:3001/api/bids/${selectedBid.id}/bid`, {
         userId: user.id,
         amount,
       });
+
       setSelectedBid(null);
       setBidAmount('');
-      await fetchLiveBids();
       toast({
         title: 'Success',
-        description: response.data.message || 'Bid placed successfully.',
+        description: response.data.message || 'Bid placed.',
       });
     } catch (err: any) {
-      console.error('Bid submission failed:', {
-        message: err.response?.data?.message,
-        status: err.response?.status,
-        data: err.response?.data,
-      });
       toast({
         title: 'Error',
-        description: err.response?.data?.message || 'Failed to place bid. Please try again.',
+        description: err.response?.data?.message || 'Failed to place bid.',
         variant: 'destructive',
       });
     }

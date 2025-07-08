@@ -41,6 +41,7 @@ model User {
   bidsCreated          Bid[]            @relation("BidCreator")
   bidsParticipated     BidParticipant[]
   bidsWon              Bid[]            @relation("BidWinner")
+  bidEvents            BidEvent[]       // 🔥 NEW: relation to BidEvent
 
   createdAt            DateTime         @default(now())
   updatedAt            DateTime         @updatedAt
@@ -69,6 +70,7 @@ model Bid {
   unit         String
   location     String
   basePrice    Float
+  minIncrementPercent Float @default(0) 
   currentPrice Float
   startDate    DateTime
   endDate      DateTime
@@ -82,6 +84,8 @@ model Bid {
   gatePassPath String?          // Field for gate pass
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
+
+  events       BidEvent[]       // 🔥 NEW: relation to BidEvent
 }
 
 model BidImage {
@@ -102,3 +106,24 @@ model BidParticipant {
 
   @@index([bidId, userId])
 }
+
+model BidEvent {
+  id        String   @id @default(cuid())
+  bidId     String
+  userId    String?            // null for system events (e.g., base price entry)
+  amount    Float
+  type      BidEventType       // 🔥 ADD THIS LINE
+  createdAt DateTime @default(now())
+
+  bid       Bid      @relation(fields: [bidId], references: [id])
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@index([bidId])
+}
+
+enum BidEventType {
+  BASE_PRICE
+  BID_PLACED
+  WINNER_SELECTED
+}
+
