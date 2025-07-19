@@ -20,7 +20,7 @@ const MyBids = () => {
     if (!user?.id) return;
     setLoading(true);
     axios
-      .get(`http://147.93.27.172:3001/api/bids/creator/${user.id}`)
+      .get(`http://localhost:3001/api/bids/creator/${user.id}`)
       .then(res => setMyBids(res.data))
       .catch(err => console.error('Failed to fetch my bids', err))
       .finally(() => setLoading(false));
@@ -109,7 +109,7 @@ const MyBids = () => {
                         {bid.images?.map((img: any) => (
                           <img
                             key={img.id}
-                            src={`http://147.93.27.172:3001${img.path}`}
+                            src={`http://localhost:3001${img.path}`}
                             alt="Bid image"
                             className="w-12 h-12 object-cover rounded"
                           />

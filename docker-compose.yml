@@ -6,9 +6,9 @@ services:
     ports:
       - "3001:3001"
     environment:
-      - HOST=147.93.27.172
+      - HOST=localhost
       - PORT=3001
-      - DATABASE_URL=prisma+postgres://accelerate.prisma-data.net/?api_key=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcGlfa2V5IjoiMDFKWUVWUjYzSzNHRlkwRFlORDdGMlhFRzAiLCJ0ZW5hbnRfaWQiOiI2OTRkYTY4NTg1MmY4OTdmNmIzZjJhZmRjNGI4YTBlNDFiMDhhNDU5Y2JhMjhjOTYyYjY3MDAwYWViMzc3ZjJjIiwiaW50ZXJuYWxfc2VjcmV0IjoiN2Q2N2IxZjItZmRiOS00Y2NkLWE3MTItNTBhYWVhZTEwZDg4In0.p9XGzSSioUmQjnvHt--NSb_0jh1pRPVEIkXADEccS_I
+      - DATABASE_URL= prisma+postgres://accelerate.prisma-data.net/?api_key=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqd3RfaWQiOjEsInNlY3VyZV9rZXkiOiJza19xVDZoNmx6RHZwYlYzRlJydUhGN3YiLCJhcGlfa2V5IjoiMDFLMEdWOUZBRDhZWjQ2QkszMTNLUU1TQTciLCJ0ZW5hbnRfaWQiOiJiZDA5ZmE1N2Y4OTE1NjJlYmQ4OTNiM2ZhZjVmODMyZDg0N2YzOTZlMmYzOWU2MDA4NDA1NDlhNWI2MDk5Mzc4IiwiaW50ZXJuYWxfc2VjcmV0IjoiZTFjOGI3YzItMmE0MC00MDE4LWJkMTctOWZmMWFjNzA2NDc2In0._RvKhIoIkU9ylcU6yShnSO5spHbgGyTTwVsReL-aiw8
     depends_on:
       - db
     volumes:
