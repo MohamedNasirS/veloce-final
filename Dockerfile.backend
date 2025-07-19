@@ -1,10 +1,10 @@
-FROM node:20  # Upgrade to Node.js 20 to resolve EBADENGINE warnings
+FROM node:20
 WORKDIR /app
 COPY backend/package*.json ./
 RUN npm install
 COPY backend/prisma ./prisma/
-RUN npx prisma generate  # Generate Prisma client during build
+RUN npx prisma generate
 COPY backend ./
 RUN npm run build
-EXPOSE 3001  # Adjust if your backend uses a different port
+EXPOSE 3000
 CMD ["npm", "run", "start:dev"]
