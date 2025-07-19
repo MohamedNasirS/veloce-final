@@ -1,0 +1,46 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    ports:
+      - "3001:3001"
+    environment:
+      - HOST=147.93.27.172
+      - PORT=3001
+      - DATABASE_URL=prisma+postgres://accelerate.prisma-data.net/?api_key=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcGlfa2V5IjoiMDFKWUVWUjYzSzNHRlkwRFlORDdGMlhFRzAiLCJ0ZW5hbnRfaWQiOiI2OTRkYTY4NTg1MmY4OTdmNmIzZjJhZmRjNGI4YTBlNDFiMDhhNDU5Y2JhMjhjOTYyYjY3MDAwYWViMzc3ZjJjIiwiaW50ZXJuYWxfc2VjcmV0IjoiN2Q2N2IxZjItZmRiOS00Y2NkLWE3MTItNTBhYWVhZTEwZDg4In0.p9XGzSSioUmQjnvHt--NSb_0jh1pRPVEIkXADEccS_I
+    depends_on:
+      - db
+    volumes:
+      - ./backend:/app
+    networks:
+      - veloce-net
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "80:80"
+    environment:
+      - VITE_API_URL=http://backend:3001
+    networks:
+      - veloce-net
+
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: veloce
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - veloce-net
+
+volumes:
+  db_data:
+
+networks:
+  veloce-net:
+    driver: bridge
