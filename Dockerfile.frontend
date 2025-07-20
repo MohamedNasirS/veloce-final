@@ -1,14 +1,20 @@
 FROM node:18 AS build
 WORKDIR /app
 
-# Copy only necessary files first for better caching
-COPY package*.json ./
+# Copy env explicitly from root
 COPY .env .env
+
+# Copy and install only the package files first for cache efficiency
+COPY package*.json ./
 RUN npm install
 
-COPY . ./
+# Now copy the rest of the source files
+COPY . .
+
+# Build the Vite app with env injected
 RUN npm run build
 
+# Production stage: serve with NGINX
 FROM nginx:alpine
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf

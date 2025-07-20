@@ -4,13 +4,15 @@ import { AppModule } from './app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import * as path from 'path';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { ConfigService } from '@nestjs/config';
 
 async function bootstrap() {
   // ✅ Use Express version of Nest to allow static file serving
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   // ✅ Access config
-  const baseUrl = process.env.BASE_URL || 'http://localhost:3001';
+  const configService = app.get(ConfigService);
+  const baseUrl = configService.get<string>('BASE_URL') || 'http://localhost:3001';
 
   // ✅ Serve static assets from `uploads` folder at `/uploads` path
   app.useStaticAssets(path.resolve(__dirname, '..', 'uploads'), {
