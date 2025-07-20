@@ -1,10 +1,11 @@
 FROM node:20
 WORKDIR /app
 COPY backend/package*.json ./
-RUN npm install
+RUN npm install --production=false
+RUN npm install @prisma/extension-accelerate@latest
 COPY backend/prisma ./prisma/
 RUN npx prisma generate
 COPY backend ./
 RUN npm run build
-EXPOSE 3000
+EXPOSE 3001
 CMD ["npm", "run", "start:dev"]
