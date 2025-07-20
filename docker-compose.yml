@@ -12,7 +12,6 @@ services:
       - HOST=localhost
       - PORT=3001
       - DATABASE_URL=postgres://bd09fa57f891562ebd893b3faf5f832d847f396e2f39e600840549a5b6099378:sk_Hm5Y1TJ5XzQIzx6qjBXu_@db.prisma.io:5432/?sslmode=require
-      - DIRECT_DATABASE_URL=postgres://bd09fa57f891562ebd893b3faf5f832d847f396e2f39e600840549a5b6099378:sk_XHaOMm5DYpwcyTSZJeBfW@db.prisma.io:5432/?sslmode=require
     depends_on:
       - db
     volumes:
