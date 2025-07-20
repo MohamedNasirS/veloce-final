@@ -5,11 +5,10 @@ import {
   Param,
   Body,
   Res,
-  Req,
   NotFoundException
 } from '@nestjs/common';
 import { AdminService } from './admin.service';
-import { Response, Request } from 'express';
+import { Response } from 'express';
 import * as path from 'path';
 import * as fs from 'fs';
 import { ConfigService } from '@nestjs/config';
@@ -37,8 +36,7 @@ export class AdminController {
   @Get('users/:userId/documents')
   async getUserDocuments(
     @Param('userId') userId: string,
-    @Res() res: Response,
-    @Req() req: Request
+    @Res() res: Response
   ) {
     const dir = path.join(process.cwd(), 'uploads', 'users', userId);
     try {
@@ -46,11 +44,7 @@ export class AdminController {
         throw new NotFoundException('Directory not found');
       }
 
-      // Prefer dynamic host, fallback to env BASE_URL
-      const host = req.get('host');
-      const protocol = req.protocol;
-      const envBase = this.configService.get<string>('BASE_URL') || 'http://localhost:3001';
-      const baseUrl = host ? `${protocol}://${host}` : envBase;
+      const baseUrl = this.configService.get<string>('BASE_URL') || 'http://localhost:3001';
 
       const files = fs.readdirSync(dir);
       const documents = files.map((filename) => ({
