@@ -9,7 +9,7 @@ services:
     ports:
       - "3001:3001"
     environment:
-      - HOST=147.93.27.172
+      - HOST=0.0.0.0
       - PORT=3001
       - DATABASE_URL=prisma+postgres://accelerate.prisma-data.net/?api_key=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqd3RfaWQiOjEsInNlY3VyZV9rZXkiOiJza19xVDZoNmx6RHZwYlVzRlJydUhGN3YiLCJhcGlfa2V5IjoiMDFLMEdWOUZBRDhZWjQ2QkszMTNLUU1TQTciLCJ0ZW5hbnRfaWQiOiJiZDA5ZmE1N2Y4OTE1NjJlYmQ4OTNiM2ZhZjVmODMyZDg0N2YzOTZlMmYzOWU2MDA4NDA1NDlhNWI2MDk5Mzc4IiwiaW50ZXJuYWxfc2VjcmV0IjoiZTFjOGI3YzItMmE0MC00MDE4LWJkMTctOWZmMWFjNzA2NDc2In0._RvKhIoIkU9ylcU6yShnSO5spHbgGyTTwVsReL-aiw8
       - DIRECT_DATABASE_URL=postgres://bd09fa57f891562ebd893b3faf5f832d847f396e2f39e600840549a5b6099378:sk_XHaOMm5DYpwcyTSZJeBfW@db.prisma.io:5432/?sslmode=require

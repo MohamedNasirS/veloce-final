@@ -36,14 +36,14 @@ const Participated = () => {
 
   useEffect(() => {
     if (user?.id) {
-      fetch(`http://147.93.27.172:3001/api/bids/participated/${user.id}`)
+      fetch(`http://0.0.0.0:3001/api/bids/participated/${user.id}`)
         .then(res => res.json())
         .then(async (data: Bid[]) => {
           const enriched = await Promise.all(
             data.map(async (bid) => {
               if (bid.isWinner && bid.status.toLowerCase() === 'closed') {
                 try {
-                  const res = await fetch(`http://147.93.27.172:3001/api/bids/${bid.id}/gate-pass?userId=${user.id}`);
+                  const res = await fetch(`http://0.0.0.0:3001/api/bids/${bid.id}/gate-pass?userId=${user.id}`);
                   if (res.ok) {
                     const { gatePassPath } = await res.json();
                     return { ...bid, gatePassPath };
@@ -85,7 +85,7 @@ const Participated = () => {
   };
 
   const handleDownloadGatePass = (gatePassPath: string) => {
-    const fullUrl = `http://147.93.27.172:3001${gatePassPath}`;
+    const fullUrl = `http://0.0.0.0:3001${gatePassPath}`;
     window.open(fullUrl, '_blank');
   };
 

@@ -26,7 +26,7 @@
 
     const login = async (email: string, password: string) => {
   try {
-    const response = await fetch('http://147.93.27.172:3001/api/auth/login', {
+    const response = await fetch('http://0.0.0.0:3001/api/auth/login', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -79,7 +79,7 @@
           });
         }
 
-        const response = await fetch('http://147.93.27.172:3001/api/auth/register', {
+        const response = await fetch('http://0.0.0.0:3001/api/auth/register', {
           method: 'POST',
           body: formData,
         });

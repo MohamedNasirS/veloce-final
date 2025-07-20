@@ -51,7 +51,7 @@ const BiddingHistory: React.FC<{ bidId: string }> = ({ bidId }) => {
   useEffect(() => {
     const fetchBiddingHistory = async () => {
       try {
-        const response = await axios.get(`http://147.93.27.172:3001/api/bids/${bidId}/history`);
+        const response = await axios.get(`http://0.0.0.0:3001/api/bids/${bidId}/history`);
         setBids(response.data.bids); // ✅ use directly
         setLoading(false);
       } catch (err) {
@@ -110,7 +110,7 @@ const WasteGeneratorDashboard: React.FC = () => {
 
   const fetchUserBids = async () => {
     try {
-      const response = await fetch(`http://147.93.27.172:3001/api/bids/creator/${user?.id}`);
+      const response = await fetch(`http://0.0.0.0:3001/api/bids/creator/${user?.id}`);
       if (response.ok) {
         const data = await response.json();
         setBids(data);

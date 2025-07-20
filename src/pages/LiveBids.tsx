@@ -9,7 +9,7 @@ import { useCountdown } from '../hooks/useMockData';
 import { useToast } from '../hooks/use-toast';
 import { io } from 'socket.io-client';
 
-const socket = io('http://147.93.27.172:3001');
+const socket = io('http://0.0.0.0:3001');
 
 const CountdownTimer: React.FC<{ endDate: string }> = ({ endDate }) => {
   const timeLeft = useCountdown(endDate);
@@ -27,7 +27,7 @@ const LiveBids = () => {
   const fetchLiveBids = async () => {
     setLoading(true);
     try {
-      const res = await axios.get('http://147.93.27.172:3001/api/bids/approved');
+      const res = await axios.get('http://0.0.0.0:3001/api/bids/approved');
       const liveBids = res.data.filter((b: any) => b.status === 'LIVE');
       setBids(liveBids);
     } catch (err) {
@@ -81,7 +81,7 @@ const handleBidUpdated = (updatedBid: any) => {
     if (isNaN(amount) || amount <= 0) return;
 
     try {
-      const updatedBid = await axios.get(`http://147.93.27.172:3001/api/bids/${selectedBid.id}`);
+      const updatedBid = await axios.get(`http://0.0.0.0:3001/api/bids/${selectedBid.id}`);
       if (amount <= updatedBid.data.currentPrice) {
         toast({
           title: 'Error',
@@ -91,7 +91,7 @@ const handleBidUpdated = (updatedBid: any) => {
         return;
       }
 
-      const response = await axios.patch(`http://147.93.27.172:3001/api/bids/${selectedBid.id}/bid`, {
+      const response = await axios.patch(`http://0.0.0.0:3001/api/bids/${selectedBid.id}/bid`, {
         userId: user.id,
         amount,
       });
