@@ -1,3 +1,4 @@
+version: '3'
 services:
   backend:
     build:
@@ -8,14 +9,15 @@ services:
     environment:
       - HOST=localhost
       - PORT=3001
-      - DATABASE_URL= prisma+postgres://accelerate.prisma-data.net/?api_key=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqd3RfaWQiOjEsInNlY3VyZV9rZXkiOiJza19xVDZoNmx6RHZwYlYzRlJydUhGN3YiLCJhcGlfa2V5IjoiMDFLMEdWOUZBRDhZWjQ2QkszMTNLUU1TQTciLCJ0ZW5hbnRfaWQiOiJiZDA5ZmE1N2Y4OTE1NjJlYmQ4OTNiM2ZhZjVmODMyZDg0N2YzOTZlMmYzOWU2MDA4NDA1NDlhNWI2MDk5Mzc4IiwiaW50ZXJuYWxfc2VjcmV0IjoiZTFjOGI3YzItMmE0MC00MDE4LWJkMTctOWZmMWFjNzA2NDc2In0._RvKhIoIkU9ylcU6yShnSO5spHbgGyTTwVsReL-aiw8
+      - DATABASE_URL=prisma+postgres://accelerate.prisma-data.net/?api_key=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqd3RfaWQiOjEsInNlY3VyZV9rZXkiOiJza19xVDZoNmx6RHZwYlVzRlJydUhGN3YiLCJhcGlfa2V5IjoiMDFLMEdWOUZBRDhZWjQ2QkszMTNLUU1TQTciLCJ0ZW5hbnRfaWQiOiJiZDA5ZmE1N2Y4OTE1NjJlYmQ4OTNiM2ZhZjVmODMyZDg0N2YzOTZlMmYzOWU2MDA4NDA1NDlhNWI2MDk5Mzc4IiwiaW50ZXJuYWxfc2VjcmV0IjoiZTFjOGI3YzItMmE0MC00MDE4LWJkMTctOWZmMWFjNzA2NDc2In0._RvKhIoIkU9ylcU6yShnSO5spHbgGyTTwVsReL-aiw8
+      - DIRECT_DATABASE_URL=postgres://bd09fa57f891562ebd893b3faf5f832d847f396e2f39e600840549a5b6099378:sk_eipRFk32q9vCfHgeLcp0n@db.prisma.io:5432/?sslmode=require
+      - TZ=Asia/Kolkata
     depends_on:
       - db
     volumes:
       - ./backend:/app
     networks:
       - veloce-net
-
   frontend:
     build:
       context: .
@@ -26,21 +28,19 @@ services:
       - VITE_API_URL=http://backend:3001
     networks:
       - veloce-net
-
   db:
     image: postgres:15
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: veloce
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=veloce
+      - TZ=Asia/Kolkata
     volumes:
       - db_data:/var/lib/postgresql/data
     networks:
       - veloce-net
-
 volumes:
   db_data:
-
 networks:
   veloce-net:
     driver: bridge
