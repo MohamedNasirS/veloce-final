@@ -1,4 +1,3 @@
-// src/modules/admin/admin.controller.ts
 import {
   Controller,
   Get,
@@ -6,15 +5,16 @@ import {
   Param,
   Body,
   Res,
+  Req,
   NotFoundException
 } from '@nestjs/common';
 import { AdminService } from './admin.service';
-import { Response } from 'express';
+import { Response, Request } from 'express';
 import * as path from 'path';
 import * as fs from 'fs';
 import { ConfigService } from '@nestjs/config';
 
-@Controller('admin') // used after globalPrefix 'api'
+@Controller('admin')
 export class AdminController {
   constructor(
     private readonly adminService: AdminService,
@@ -35,14 +35,23 @@ export class AdminController {
   }
 
   @Get('users/:userId/documents')
-  async getUserDocuments(@Param('userId') userId: string, @Res() res: Response) {
+  async getUserDocuments(
+    @Param('userId') userId: string,
+    @Res() res: Response,
+    @Req() req: Request
+  ) {
     const dir = path.join(process.cwd(), 'uploads', 'users', userId);
     try {
       if (!fs.existsSync(dir)) {
         throw new NotFoundException('Directory not found');
       }
 
-      const baseUrl = this.configService.get<string>('BASE_URL') || 'http://localhost:3001';
+      // Prefer dynamic host, fallback to env BASE_URL
+      const host = req.get('host');
+      const protocol = req.protocol;
+      const envBase = this.configService.get<string>('BASE_URL') || 'http://localhost:3001';
+      const baseUrl = host ? `${protocol}://${host}` : envBase;
+
       const files = fs.readdirSync(dir);
       const documents = files.map((filename) => ({
         name: filename,

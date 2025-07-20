@@ -5,21 +5,29 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import * as path from 'path';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { ConfigService } from '@nestjs/config';
+import os from 'os';
+
+function getLocalIp(): string {
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name] || []) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        return iface.address;
+      }
+    }
+  }
+  return 'localhost';
+}
 
 async function bootstrap() {
-  // ✅ Use Express version of Nest to allow static file serving
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  // ✅ Access config
   const configService = app.get(ConfigService);
-  const baseUrl = configService.get<string>('BASE_URL') || 'http://localhost:3001';
 
-  // ✅ Serve static assets from `uploads` folder at `/uploads` path
   app.useStaticAssets(path.resolve(__dirname, '..', 'uploads'), {
     prefix: '/uploads',
   });
 
-  // ✅ Swagger Setup
   const config = new DocumentBuilder()
     .setTitle('Auction API')
     .setDescription('The Auction API documentation')
@@ -28,13 +36,9 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
-  // ✅ Global prefix for all routes
   app.setGlobalPrefix('api');
-
-  // ✅ Global validation pipes
   app.useGlobalPipes(new ValidationPipe());
 
-  // ✅ Enable CORS
   app.enableCors({
     origin: true,
     credentials: true,
@@ -42,13 +46,13 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   });
 
-  // ✅ Start server
   await app.listen(3001, '0.0.0.0');
 
-  // ✅ Logging using dynamic BASE_URL
+  const ip = getLocalIp();
+  const baseUrl = `http://${ip}:3001`;
+
   console.log(`✅ Server running at ${baseUrl}`);
   console.log(`🔗 Swagger: ${baseUrl}/api`);
   console.log(`📁 Static files served from ${baseUrl}/uploads/...`);
 }
-
 bootstrap();
