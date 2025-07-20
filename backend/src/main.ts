@@ -11,7 +11,7 @@ async function bootstrap() {
 
   // ✅ Serve static assets from `uploads` folder at `/uploads` path
   app.useStaticAssets(path.resolve(__dirname, '..', 'uploads'), {
-    prefix: '/uploads', // will map to http://0.0.0.0:3001/uploads
+    prefix: '/uploads', // will map to http://localhost:3001/uploads
   });
 
   // ✅ Swagger Setup
@@ -39,9 +39,9 @@ async function bootstrap() {
 
   // ✅ Start server
   await app.listen(3001);
-  console.log(`✅ Server running at http://0.0.0.0:3001`);
-  console.log(`🔗 Swagger: http://0.0.0.0:3001/api`);
-  console.log(`📁 Static files served from http://0.0.0.0:3001/uploads/...`);
+  console.log(`✅ Server running at http://localhost:3001`);
+  console.log(`🔗 Swagger: http://localhost:3001/api`);
+  console.log(`📁 Static files served from http://localhost:3001/uploads/...`);
 }
 
 bootstrap();

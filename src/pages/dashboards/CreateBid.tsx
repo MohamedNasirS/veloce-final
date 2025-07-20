@@ -38,7 +38,7 @@ const CreateBid = () => {
       if (img) data.append('images', img);
     });
 
-    await fetch('http://0.0.0.0:3001/api/bids', {
+    await fetch('http://localhost:3001/api/bids', {
       method: 'POST',
       body: data,
     });

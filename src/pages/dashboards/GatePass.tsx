@@ -47,7 +47,7 @@ const GatePass: React.FC = () => {
 
   const fetchBidDetails = async () => {
     try {
-      const response = await fetch(`http://0.0.0.0:3001/api/bids/${bidId}`);
+      const response = await fetch(`http://localhost:3001/api/bids/${bidId}`);
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
 
@@ -85,7 +85,7 @@ const GatePass: React.FC = () => {
 
   const fetchGatePassStatus = async () => {
     try {
-      const response = await fetch(`http://0.0.0.0:3001/api/bids/${bidId}/gate-pass?userId=${user?.id}`);
+      const response = await fetch(`http://localhost:3001/api/bids/${bidId}/gate-pass?userId=${user?.id}`);
       if (response.ok) {
         const { gatePassPath } = await response.json();
         setGatePassPath(gatePassPath);
@@ -125,7 +125,7 @@ const GatePass: React.FC = () => {
     formData.append('userId', user!.id);
 
     try {
-      const response = await fetch(`http://0.0.0.0:3001/api/bids/${bidId}/gate-pass`, {
+      const response = await fetch(`http://localhost:3001/api/bids/${bidId}/gate-pass`, {
         method: 'POST',
         body: formData,
       });
@@ -156,13 +156,13 @@ const GatePass: React.FC = () => {
 
   const handleViewGatePass = () => {
     if (gatePassPath) {
-      window.open(`http://0.0.0.0:3001${gatePassPath}`, '_blank');
+      window.open(`http://localhost:3001${gatePassPath}`, '_blank');
     }
   };
 
   const handleDownloadGatePass = () => {
     if (gatePassPath && bid) {
-      const fullUrl = `http://0.0.0.0:3001${gatePassPath}`;
+      const fullUrl = `http://localhost:3001${gatePassPath}`;
       const link = document.createElement('a');
       link.href = fullUrl;
       link.download = `gate-pass-${bid.lotName.replace(/[^a-zA-Z0-9]/g, '-')}-${bidId}.pdf`;

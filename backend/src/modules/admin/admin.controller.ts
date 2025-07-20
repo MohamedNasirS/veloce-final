@@ -33,7 +33,7 @@ export class AdminController {
       const files = fs.readdirSync(dir);
       const documents = files.map((filename) => ({
         name: filename,
-        url: `http://0.0.0.0:3001/uploads/users/${userId}/${filename}`,
+        url: `http://localhost:3001/uploads/users/${userId}/${filename}`,
       }));
 
       return res.json({ documents });

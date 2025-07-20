@@ -75,7 +75,7 @@ const BidDetail = () => {
   const fetchBidDetail = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`http://0.0.0.0:3001/api/bids/${bidId}`);
+      const response = await fetch(`http://localhost:3001/api/bids/${bidId}`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch bid details');
@@ -98,7 +98,7 @@ const BidDetail = () => {
 
     try {
       setPlacingBid(true);
-      const response = await fetch(`http://0.0.0.0:3001/api/bids/${bidId}/place-bid`, {
+      const response = await fetch(`http://localhost:3001/api/bids/${bidId}/place-bid`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -130,7 +130,7 @@ const BidDetail = () => {
     if (!confirm('Are you sure you want to close this bid?')) return;
 
     try {
-      const response = await fetch(`http://0.0.0.0:3001/api/bids/${bidId}/close`, {
+      const response = await fetch(`http://localhost:3001/api/bids/${bidId}/close`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -271,10 +271,10 @@ const BidDetail = () => {
                   {bid.images.map((image) => (
                     <div key={image.id} className="relative">
                       <img
-                        src={`http://0.0.0.0:3001/api/bids/images/${image.id}`}
+                        src={`http://localhost:3001/api/bids/images/${image.id}`}
                         alt={image.originalName}
                         className="w-full h-32 object-cover rounded-lg border cursor-pointer hover:opacity-80"
-                        onClick={() => setSelectedImage(`http://0.0.0.0:3001/api/bids/images/${image.id}`)}
+                        onClick={() => setSelectedImage(`http://localhost:3001/api/bids/images/${image.id}`)}
                       />
                     </div>
                   ))}

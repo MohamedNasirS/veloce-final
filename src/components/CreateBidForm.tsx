@@ -110,7 +110,7 @@ const CreateBidForm = () => {
         submitData.append('images', image);
       });
 
-      const response = await fetch('http://0.0.0.0:3001/api/bids/create', {
+      const response = await fetch('http://localhost:3001/api/bids/create', {
         method: 'POST',
         body: submitData,
       });
