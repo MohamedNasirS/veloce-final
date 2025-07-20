@@ -38,7 +38,7 @@ async function bootstrap() {
   });
 
   // ✅ Start server
-  await app.listen(3001);
+  await app.listen(3001, '0.0.0.0'); // ✅ required for Docker
   console.log(`✅ Server running at http://localhost:3001`);
   console.log(`🔗 Swagger: http://localhost:3001/api`);
   console.log(`📁 Static files served from http://localhost:3001/uploads/...`);
