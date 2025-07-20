@@ -34,9 +34,15 @@ async function bootstrap() {
 
   await app.listen(3001, '0.0.0.0');
 
-  const baseUrl = configService.get<string>('BASE_URL') || 'http://localhost:3001';
-  console.log(`✅ Server running at ${baseUrl}`);
-  console.log(`🔗 Swagger: ${baseUrl}/api`);
-  console.log(`📁 Static files served from ${baseUrl}/uploads/...`);
+  const baseUrl = configService.get<string>('BASE_URL');
+
+  if (!baseUrl) {
+    console.warn('⚠️ BASE_URL not set. Defaulting to http://localhost:3001');
+  }
+
+  console.log(`✅ Server running at ${baseUrl || 'http://localhost:3001'}`);
+  console.log(`🔗 Swagger: ${baseUrl || 'http://localhost:3001'}/api`);
+  console.log(`📁 Static files served from ${baseUrl || 'http://localhost:3001'}/uploads/...`);
+
 }
 bootstrap();
