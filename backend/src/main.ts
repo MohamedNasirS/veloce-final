@@ -4,11 +4,11 @@ import { AppModule } from './app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import * as path from 'path';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import { ConfigService } from '@nestjs/config';
+//import { ConfigService } from '@nestjs/config';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
-  const configService = app.get(ConfigService);
+  //const configService = app.get(ConfigService);
 
   app.useStaticAssets(path.resolve(__dirname, '..', 'uploads'), {
     prefix: '/uploads',
@@ -34,15 +34,10 @@ async function bootstrap() {
 
   await app.listen(3001, '0.0.0.0');
 
-  const baseUrl = configService.get<string>('BASE_URL');
-
-  if (!baseUrl) {
-    console.warn('⚠️ BASE_URL not set. Defaulting to http://localhost:3001');
-  }
-
-  console.log(`✅ Server running at ${baseUrl || 'http://localhost:3001'}`);
-  console.log(`🔗 Swagger: ${baseUrl || 'http://localhost:3001'}/api`);
-  console.log(`📁 Static files served from ${baseUrl || 'http://localhost:3001'}/uploads/...`);
+  const baseUrl = 'http://147.93.27.172:3001';
+  console.log(`✅ Server running at ${baseUrl}`);
+  console.log(`🔗 Swagger: ${baseUrl}/api`);
+  console.log(`📁 Static files served from ${baseUrl}/uploads/...`);
 
 }
 bootstrap();

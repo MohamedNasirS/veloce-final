@@ -17,7 +17,7 @@ import { ConfigService } from '@nestjs/config';
 export class AdminController {
   constructor(
     private readonly adminService: AdminService,
-    private readonly configService: ConfigService
+    //private readonly configService: ConfigService
   ) {}
 
   @Get('users')
@@ -44,7 +44,8 @@ export class AdminController {
         throw new NotFoundException('Directory not found');
       }
 
-      const baseUrl = this.configService.get<string>('BASE_URL') || 'http://localhost:3001';
+      //const baseUrl = this.configService.get<string>('BASE_URL') || 'http://localhost:3001';
+      const baseUrl = 'http://147.93.27.172:3001';
 
       const files = fs.readdirSync(dir);
       const documents = files.map((filename) => ({
