@@ -38,7 +38,7 @@ const CreateBid = () => {
       if (img) data.append('images', img);
     });
 
-    await fetch('http://localhost:3001/api/bids', {
+    await fetch(`${import.meta.env.VITE_API_URL}/api/bids`, {
       method: 'POST',
       body: data,
     });

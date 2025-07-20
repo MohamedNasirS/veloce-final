@@ -7,18 +7,20 @@ import { PrismaModule } from './modules/prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { BidsModule } from './modules/bids/bids.module';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({ isGlobal: true }), // ✅ This line is required
     ScheduleModule.forRoot(),
     ServeStaticModule.forRoot({
-      rootPath: join(__dirname, '..', '..', 'uploads'), 
+      rootPath: join(__dirname, '..', '..', 'uploads'),
       serveRoot: '/uploads',
     }),
     PrismaModule,
     AuthModule,
     AdminModule,
-    BidsModule
+    BidsModule,
   ],
 })
 export class AppModule {}

@@ -1,13 +1,25 @@
 // src/modules/admin/admin.controller.ts
-import { Controller, Get, Patch, Param, Body, Res, NotFoundException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Patch,
+  Param,
+  Body,
+  Res,
+  NotFoundException
+} from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { Response } from 'express';
 import * as path from 'path';
 import * as fs from 'fs';
+import { ConfigService } from '@nestjs/config';
 
 @Controller('admin') // used after globalPrefix 'api'
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
+  constructor(
+    private readonly adminService: AdminService,
+    private readonly configService: ConfigService
+  ) {}
 
   @Get('users')
   getAllUsers() {
@@ -30,10 +42,11 @@ export class AdminController {
         throw new NotFoundException('Directory not found');
       }
 
+      const baseUrl = this.configService.get<string>('BASE_URL') || 'http://localhost:3001';
       const files = fs.readdirSync(dir);
       const documents = files.map((filename) => ({
         name: filename,
-        url: `http://localhost:3001/uploads/users/${userId}/${filename}`,
+        url: `${baseUrl}/uploads/users/${userId}/${filename}`,
       }));
 
       return res.json({ documents });

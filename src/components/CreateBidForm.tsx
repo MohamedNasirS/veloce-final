@@ -110,7 +110,7 @@ const CreateBidForm = () => {
         submitData.append('images', image);
       });
 
-      const response = await fetch('http://localhost:3001/api/bids/create', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/bids/create`, {
         method: 'POST',
         body: submitData,
       });

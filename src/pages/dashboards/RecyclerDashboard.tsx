@@ -88,7 +88,7 @@ const RecyclerDashboard = () => {
   const fetchBids = async () => {
     try {
       setError(null);
-      const allBidsResponse = await fetch('http://localhost:3001/api/bids?status=published,in-progress');
+      const allBidsResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/bids?status=published,in-progress`);
       if (!allBidsResponse.ok) {
         throw new Error(`HTTP error! status: ${allBidsResponse.status}`);
       }
@@ -119,7 +119,7 @@ const RecyclerDashboard = () => {
 
   const placeBid = async (bidId: string, amount: number) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/bids/${bidId}/place-bid`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/bids/${bidId}/place-bid`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -148,7 +148,7 @@ const RecyclerDashboard = () => {
       return {
         id: image.id,
         originalName: path.split('/').pop() || 'missing-filename.jpg',
-        url: `http://localhost:3001${path}`,
+        url: `${import.meta.env.VITE_API_URL}${path}`,
       };
     });
   };

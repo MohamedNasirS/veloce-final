@@ -15,7 +15,7 @@ const AdminUsers = () => {
 
   useEffect(() => {
     axios
-      .get('http://localhost:3001/api/admin/users')
+      .get(`${import.meta.env.VITE_API_URL}/api/admin/users`)
       .then((res) => {
         // Filter out admin users
         const filtered = res.data.filter((u: any) => u.role !== 'admin');
@@ -56,7 +56,7 @@ const AdminUsers = () => {
 
   const handleStatusChange = async (userId: string, newStatus: string) => {
     try {
-      await axios.patch(`http://localhost:3001/api/admin/users/${userId}/status`, {
+      await axios.patch(`${import.meta.env.VITE_API_URL}/api/admin/users/${userId}/status`, {
         status: newStatus,
       });
       setUsers((prev) =>
@@ -80,7 +80,7 @@ const AdminUsers = () => {
 
   const handleViewDocuments = async (userId: string) => {
     try {
-      const res = await axios.get(`http://localhost:3001/api/admin/users/${userId}/documents`);
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/admin/users/${userId}/documents`);
       setSelectedDocs(res.data.documents);
     } catch (error) {
       toast({

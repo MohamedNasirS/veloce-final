@@ -1,15 +1,16 @@
 version: '3'
+
 services:
   backend:
     env_file:
-    - backend/.env
+      - backend/.env
     build:
       context: .
       dockerfile: Dockerfile.backend
     ports:
       - "3001:3001"
     environment:
-      - HOST=localhost
+      - HOST=0.0.0.0
       - PORT=3001
       - DATABASE_URL=postgres://bd09fa57f891562ebd893b3faf5f832d847f396e2f39e600840549a5b6099378:sk_Hm5Y1TJ5XzQIzx6qjBXu_@db.prisma.io:5432/?sslmode=require
     depends_on:
@@ -18,16 +19,18 @@ services:
       - ./backend:/app
     networks:
       - veloce-net
+
   frontend:
+    env_file:
+      - .env  # 🔁 Pass VITE_API_URL from root-level .env
     build:
       context: .
       dockerfile: Dockerfile.frontend
     ports:
       - "80:80"
-    environment:
-      - VITE_API_URL=http://backend:3001
     networks:
       - veloce-net
+
   db:
     image: postgres:15
     environment:
@@ -39,8 +42,10 @@ services:
       - db_data:/var/lib/postgresql/data
     networks:
       - veloce-net
+
 volumes:
   db_data:
+
 networks:
   veloce-net:
     driver: bridge

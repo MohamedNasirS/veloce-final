@@ -60,8 +60,8 @@ export default function SelectWinner() {
       console.log('Fetching details for bidId:', bidId);
       try {
         const [bidResponse, historyResponse] = await Promise.all([
-          axios.get(`http://localhost:3001/api/bids/${bidId}`),
-          axios.get(`http://localhost:3001/api/bids/${bidId}/history`),
+          axios.get(`${import.meta.env.VITE_API_URL}/api/bids/${bidId}`),
+          axios.get(`${import.meta.env.VITE_API_URL}/api/bids/${bidId}/history`),
         ]);
 
         setBid(bidResponse.data);
@@ -99,7 +99,7 @@ export default function SelectWinner() {
     }
 
     try {
-      await axios.patch(`http://localhost:3001/api/bids/${bidId}/select-winner`, {
+      await axios.patch(`${import.meta.env.VITE_API_URL}/api/bids/${bidId}/select-winner`, {
         winnerId: selectedWinner,
       });
       toast({
@@ -152,7 +152,7 @@ export default function SelectWinner() {
                 {bid.images.map((image, index) => (
                   <img
                     key={index}
-                    src={`http://localhost:3001${image.path}`}
+                    src={`${import.meta.env.VITE_API_URL}${image.path}`}
                     alt={`Bid Image ${index + 1}`}
                     className="w-24 h-24 object-cover"
                   />

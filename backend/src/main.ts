@@ -4,14 +4,19 @@ import { AppModule } from './app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import * as path from 'path';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { ConfigService } from '@nestjs/config';
 
 async function bootstrap() {
   // ✅ Use Express version of Nest to allow static file serving
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
+  // ✅ Access config
+  const configService = app.get(ConfigService);
+  const baseUrl = configService.get<string>('BASE_URL') || 'http://localhost:3001';
+
   // ✅ Serve static assets from `uploads` folder at `/uploads` path
   app.useStaticAssets(path.resolve(__dirname, '..', 'uploads'), {
-    prefix: '/uploads', // will map to http://localhost:3001/uploads
+    prefix: '/uploads',
   });
 
   // ✅ Swagger Setup
@@ -38,10 +43,12 @@ async function bootstrap() {
   });
 
   // ✅ Start server
-  await app.listen(3001, '0.0.0.0'); // ✅ required for Docker
-  console.log(`✅ Server running at http://localhost:3001`);
-  console.log(`🔗 Swagger: http://localhost:3001/api`);
-  console.log(`📁 Static files served from http://localhost:3001/uploads/...`);
+  await app.listen(3001, '0.0.0.0');
+
+  // ✅ Logging using dynamic BASE_URL
+  console.log(`✅ Server running at ${baseUrl}`);
+  console.log(`🔗 Swagger: ${baseUrl}/api`);
+  console.log(`📁 Static files served from ${baseUrl}/uploads/...`);
 }
 
 bootstrap();
