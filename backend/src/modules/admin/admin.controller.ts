@@ -2,22 +2,24 @@ import {
   Controller,
   Get,
   Patch,
+  Delete,
   Param,
   Body,
   Res,
-  NotFoundException
+  NotFoundException,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { Response } from 'express';
 import * as path from 'path';
 import * as fs from 'fs';
-import { ConfigService } from '@nestjs/config';
+import { Role } from '@prisma/client'; // Corrected import from UserRole to Role
 
 @Controller('admin')
 export class AdminController {
   constructor(
     private readonly adminService: AdminService,
-    //private readonly configService: ConfigService
   ) {}
 
   @Get('users')
@@ -28,9 +30,23 @@ export class AdminController {
   @Patch('users/:id/status')
   updateUserStatus(
     @Param('id') id: string,
-    @Body() body: { status: 'approved' | 'rejected' }
+    @Body() body: { status: 'approved' | 'rejected' | 'pending' }
   ) {
     return this.adminService.updateUserStatus(id, body.status);
+  }
+
+  @Patch('users/:id/role')
+  updateUserRole(
+    @Param('id') id: string,
+    @Body() body: { role: Role } // Use the corrected Role type
+  ) {
+    return this.adminService.updateUserRole(id, body.role);
+  }
+
+  @Delete('users/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  deleteUser(@Param('id') id: string) {
+    return this.adminService.deleteUser(id);
   }
 
   @Get('users/:userId/documents')
@@ -44,8 +60,7 @@ export class AdminController {
         throw new NotFoundException('Directory not found');
       }
 
-      //const baseUrl = this.configService.get<string>('BASE_URL') || 'http://localhost:3001';
-      const baseUrl = 'http://147.93.27.172:3001';
+      const baseUrl = 'http://147.93.27.172:3001'; // Replace with your actual base URL from config
 
       const files = fs.readdirSync(dir);
       const documents = files.map((filename) => ({

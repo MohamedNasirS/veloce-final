@@ -1,5 +1,3 @@
-// ✅ 1. bid-status.scheduler.ts — Cron Job for Status Updates
-
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
@@ -18,6 +16,7 @@ export class BidStatusScheduler {
   async updateBidStatuses() {
     const now = new Date();
 
+    // --- Bids going LIVE ---
     const liveBids = await this.prisma.bid.findMany({
       where: {
         status: 'APPROVED',
@@ -26,17 +25,21 @@ export class BidStatusScheduler {
     });
 
     for (const bid of liveBids) {
-      await this.prisma.bid.update({ where: { id: bid.id }, data: { status: 'LIVE' } });
-      const updated = await this.prisma.bid.findUnique({
+      const updatedBid = await this.prisma.bid.update({
         where: { id: bid.id },
+        data: { status: 'LIVE' },
         include: {
           participants: true,
           creator: { select: { id: true, name: true, company: true } },
         },
       });
-      this.bidGateway.emitBidUpdate(updated);
+      // Send the general update for the live bids page
+      this.bidGateway.emitBidUpdate(updatedBid);
+      // --- Send the specific notification for the sidebar ---
+      this.bidGateway.emitNewBidLive(updatedBid);
     }
 
+    // --- Bids getting CLOSED ---
     const closedBids = await this.prisma.bid.findMany({
       where: {
         status: 'LIVE',
@@ -45,15 +48,18 @@ export class BidStatusScheduler {
     });
 
     for (const bid of closedBids) {
-      await this.prisma.bid.update({ where: { id: bid.id }, data: { status: 'CLOSED' } });
-      const updated = await this.prisma.bid.findUnique({
+      const updatedBid = await this.prisma.bid.update({
         where: { id: bid.id },
+        data: { status: 'CLOSED' },
         include: {
           participants: true,
           creator: { select: { id: true, name: true, company: true } },
         },
       });
-      this.bidGateway.emitBidUpdate(updated);
+      // Send the general update to remove it from the live bids page
+      this.bidGateway.emitBidUpdate(updatedBid);
+      // --- Send the specific notification for the sidebar ---
+      this.bidGateway.emitBidClosed(updatedBid);
     }
 
     if (liveBids.length || closedBids.length) {

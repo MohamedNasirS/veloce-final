@@ -4,11 +4,10 @@ import { AppModule } from './app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import * as path from 'path';
 import { NestExpressApplication } from '@nestjs/platform-express';
-//import { ConfigService } from '@nestjs/config';
+import { IoAdapter } from '@nestjs/platform-socket.io'; // Import the IoAdapter
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
-  //const configService = app.get(ConfigService);
 
   app.useStaticAssets(path.resolve(__dirname, '..', 'uploads'), {
     prefix: '/uploads',
@@ -32,12 +31,14 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   });
 
+  // Add this line to enable the WebSocket adapter
+  app.useWebSocketAdapter(new IoAdapter(app));
+
   await app.listen(3001, '0.0.0.0');
 
   const baseUrl = 'http://147.93.27.172:3001';
   console.log(`✅ Server running at ${baseUrl}`);
   console.log(`🔗 Swagger: ${baseUrl}/api`);
   console.log(`📁 Static files served from ${baseUrl}/uploads/...`);
-
 }
 bootstrap();

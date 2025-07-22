@@ -9,11 +9,26 @@ const AdminDashboard = () => {
   const [bids, setBids] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [pendingBids, setPendingBids] = useState<any[]>([]);
+  const [closedBids, setClosedBids] = useState<any[]>([]);
 
   useEffect(() => {
-    axios.get(`${import.meta.env.VITE_API_URL}/api/bids`).then(res => setBids(res.data)).catch(console.error);
-    axios.get('/api/users').then(res => setUsers(res.data)).catch(console.error);
-    axios.get(`${import.meta.env.VITE_API_URL}/api/bids/pending`).then(res => setPendingBids(res.data)).catch(console.error);
+    const fetchDashboardData = async () => {
+      try {
+        const [bidsRes, usersRes, pendingBidsRes] = await Promise.all([
+          axios.get(`${import.meta.env.VITE_API_URL}/api/bids`),
+          axios.get(`${import.meta.env.VITE_API_URL}/api/users`),
+          axios.get(`${import.meta.env.VITE_API_URL}/api/bids/pending`),
+        ]);
+        setBids(bidsRes.data);
+        setUsers(usersRes.data);
+        setPendingBids(pendingBidsRes.data);
+        setClosedBids(bidsRes.data.filter((bid: any) => bid.status === 'CLOSED' && !bid.winnerId));
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+      }
+    };
+
+    fetchDashboardData();
   }, []);
 
   const totalUsers = users.length;
@@ -58,18 +73,15 @@ const AdminDashboard = () => {
           <CardDescription>Manage platform operations and oversight</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Link to="/dashboard/admin/users">
-              <Button className="w-full h-20 text-lg">👥 Manage Users</Button>
+              <Button className="w-full h-20 text-lg">Manage Users</Button>
             </Link>
             <Link to="/dashboard/admin/bids">
-              <Button variant="outline" className="w-full h-20 text-lg">📋 Review Bids</Button>
+              <Button variant="outline" className="w-full h-20 text-lg">Review Bids</Button>
             </Link>
-            <Link to="/dashboard/admin/logs">
-              <Button variant="outline" className="w-full h-20 text-lg">📜 Audit Logs</Button>
-            </Link>
-            <Link to="/dashboard/admin/documents">
-              <Button variant="outline" className="w-full h-20 text-lg">📁 Documents</Button>
+            <Link to="/dashboard/admin/gate-passes">
+              <Button variant="outline" className="w-full h-20 text-lg">Gate Passes</Button>
             </Link>
           </div>
         </CardContent>
@@ -104,6 +116,39 @@ const AdminDashboard = () => {
         </CardContent>
       </Card>
 
+      {/* Closed Bids for Winner Selection */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Closed Bids Awaiting Winner Selection</CardTitle>
+          <CardDescription>Bids that need a winner to be selected</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {closedBids.map((bid: any) => (
+              <div key={bid.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
+                <div className="flex-1">
+                  <h3 className="font-semibold">{bid.lotName}</h3>
+                  <p className="text-sm text-gray-600">{bid.creator?.company}</p>
+                  <p className="text-sm text-gray-500">{bid.wasteType} • {bid.quantity} {bid.unit}</p>
+                </div>
+                <div className="text-right space-y-1">
+                  <Badge variant="secondary" className="bg-green-100 text-green-800">Closed</Badge>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {new Date(bid.endDate).toLocaleString()}
+                  </p>
+                  <Link to={`/dashboard/admin/select-winner/${bid.id}`}>
+                    <Button variant="outline" size="sm">Select Winner</Button>
+                  </Link>
+                </div>
+              </div>
+            ))}
+            {closedBids.length === 0 && (
+              <div className="text-center text-gray-500">No closed bids awaiting winner selection.</div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Recent Activity */}
       <Card>
         <CardHeader>
@@ -130,7 +175,7 @@ const AdminDashboard = () => {
                   >
                     {bid.status}
                   </Badge>
-                  <p className="text-lg font-semibold mt-1">${bid.currentPrice.toLocaleString()}</p>
+                  <p className="text-lg font-semibold mt-1">₹{bid.currentPrice.toLocaleString()}</p>
                 </div>
               </div>
             ))}

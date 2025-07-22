@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { useAuth } from '../../contexts/AuthContext';
-import BidDetail from '../BidDetail';
+import { io, Socket } from 'socket.io-client';
 
 // Modal Component
 const Modal = ({ isOpen, onClose, title, children }) => {
@@ -78,8 +78,57 @@ const RecyclerDashboard = () => {
   const [modalContent, setModalContent] = useState<{ id: string; originalName: string; url: string }[]>([]);
 
   useEffect(() => {
+    let socket: Socket | null = null;
     if (user) {
       fetchBids();
+
+      // Initialize WebSocket
+      socket = io(`${import.meta.env.VITE_API_URL}`);
+      socket.on('connect', () => {
+        console.log('RecyclerDashboard connected to WebSocket server!');
+      });
+
+      socket.on('notification', (notification: { type: string; bidId: string; message: string }) => {
+        if (notification.type === 'BID_CLOSED') {
+          setAllBids(prev =>
+            prev.map(bid =>
+              bid.id === notification.bidId ? { ...bid, status: 'CLOSED' } : bid
+            )
+          );
+          setMyParticipations(prev =>
+            prev.map(bid =>
+              bid.id === notification.bidId ? { ...bid, status: 'CLOSED' } : bid
+            )
+          );
+        }
+      });
+
+      // Fallback interval to check endDate
+      const interval = setInterval(() => {
+        const now = new Date();
+        setAllBids(prev =>
+          prev.map(bid =>
+            new Date(bid.endDate) < now && bid.status !== 'CLOSED'
+              ? { ...bid, status: 'CLOSED' }
+              : bid
+          )
+        );
+        setMyParticipations(prev =>
+          prev.map(bid =>
+            new Date(bid.endDate) < now && bid.status !== 'CLOSED'
+              ? { ...bid, status: 'CLOSED' }
+              : bid
+          )
+        );
+      }, 60000); // Check every minute
+
+      return () => {
+        if (socket) {
+          socket.disconnect();
+          console.log('RecyclerDashboard disconnected from WebSocket.');
+        }
+        clearInterval(interval);
+      };
     } else {
       setLoading(false);
     }
@@ -123,6 +172,7 @@ const RecyclerDashboard = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': user?.token ? `Bearer ${user?.token}` : undefined,
         },
         body: JSON.stringify({
           bidderId: user?.id,
@@ -171,21 +221,28 @@ const RecyclerDashboard = () => {
   const wonBids = myParticipations.filter(bid => {
     if (!bid.bidEntries || bid.bidEntries.length === 0) return false;
     const myBid = bid.bidEntries.find(entry => entry.bidderId === user?.id);
-    return myBid && myBid.amount === bid.currentPrice;
+    return myBid && myBid.amount === bid.currentPrice && bid.status === 'CLOSED';
   });
   const totalWonValue = wonBids.reduce((sum, bid) => sum + (bid.currentPrice || 0), 0);
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string, endDate: string) => {
+    const isPastEndDate = new Date(endDate) < new Date();
+    if (isPastEndDate || status === 'CLOSED') {
+      return 'bg-gray-300 text-gray-800';
+    }
     switch (status) {
       case 'published':
         return 'bg-blue-100 text-blue-800';
       case 'in-progress':
         return 'bg-orange-100 text-orange-800';
-      case 'closed':
-        return 'bg-green-100 text-green-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const getStatusLabel = (status: string, endDate: string) => {
+    const isPastEndDate = new Date(endDate) < new Date();
+    return isPastEndDate || status === 'CLOSED' ? 'Closed' : status === 'published' ? 'New' : 'Active';
   };
 
   const isMyHighestBid = (bid: WasteBid) => {
@@ -221,7 +278,7 @@ const RecyclerDashboard = () => {
     return (
       <div className="flex items-center justify-center p-8">
         <div className="text-center">
-          <div className="text-gray-500 text лично-xl mb-4">🔒 Authentication Required</div>
+          <div className="text-gray-500 text-xl mb-4">🔒 Authentication Required</div>
           <p className="text-gray-600">Please log in to access the dashboard.</p>
         </div>
       </div>
@@ -243,8 +300,7 @@ const RecyclerDashboard = () => {
                 <a
                   href={doc.url}
                   target="_blank"
-                  rel="noopener noreferre
-r"
+                  rel="noopener noreferrer"
                   className="text-blue-600 hover:underline"
                 >
                   {doc.originalName}
@@ -278,7 +334,7 @@ r"
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-2xl font-bold text-blue-600">${totalWonValue.toLocaleString()}</CardTitle>
+            <CardTitle className="text-2xl font-bold text-blue-600">₹{totalWonValue.toLocaleString()}</CardTitle>
             <CardDescription>Total Won Value</CardDescription>
           </CardHeader>
         </Card>
@@ -318,7 +374,7 @@ r"
         <CardContent>
           <div className="space-y-4">
             {allBids
-              .filter(bid => bid.creator?.id !== user?.id)
+              .filter(bid => bid.creator?.id !== user?.id && bid.status === 'LIVE')
               .slice(0, 5)
               .map(bid => {
                 const myBid = (bid.bidEntries || []).find(entry => entry.bidderId === user?.id);
@@ -327,7 +383,7 @@ r"
                 return (
                   <div key={bid.id} className="border rounded-lg p-4 hover:bg-gray-50">
                     <div className="flex justify-between items-start mb-3">
-                        <div className="flex-1">
+                      <div className="flex-1">
                         <h3 className="font-semibold text-lg">{bid.lotName || 'Unnamed Lot'}</h3>
                         <p className="text-sm text-gray-600 mb-2">{bid.description || 'No description'}</p>
                         <div className="flex flex-wrap gap-2 text-sm text-gray-500">
@@ -337,8 +393,8 @@ r"
                         </div>
                       </div>
                       <div className="text-right">
-                        <Badge className={getStatusColor(bid.status)} variant="secondary">
-                          {bid.status === 'published' ? 'New' : 'Active'}
+                        <Badge className={getStatusColor(bid.status, bid.endDate)} variant="secondary">
+                          {getStatusLabel(bid.status, bid.endDate)}
                         </Badge>
                         {(bid.images || []).length > 0 && (
                           <p className="text-xs text-gray-500 mt-1">📷 {bid.images.length} image(s)</p>
@@ -349,7 +405,7 @@ r"
                       <div className="flex items-center gap-4">
                         <div>
                           <p className="text-xs text-gray-500">Current Price</p>
-                          <p className="text-xl font-bold text-green-600">${(bid.currentPrice || 0).toLocaleString()}</p>
+                          <p className="text-xl font-bold text-green-600">₹{(bid.currentPrice || 0).toLocaleString()}</p>
                         </div>
                         <div>
                           <p className="text-xs text-gray-500">Total Bids</p>
@@ -361,7 +417,7 @@ r"
                             <p
                               className={`text-sm font-medium ${isWinning ? 'text-green-600' : 'text-orange-600'}`}
                             >
-                              ${myBid.amount.toLocaleString()}
+                              ₹{myBid.amount.toLocaleString()}
                               {isWinning && ' 🏆'}
                             </p>
                           </div>
@@ -376,7 +432,7 @@ r"
                         >
                           View Documents
                         </Button>
-                        {bid.status !== 'closed' && new Date(bid.endDate) > new Date() && (
+                        {bid.status === 'LIVE' && new Date(bid.endDate) > new Date() && (
                           <Button
                             size="sm"
                             onClick={() => {
@@ -399,7 +455,7 @@ r"
               })}
           </div>
 
-          {allBids.length === 0 && (
+          {allBids.filter(bid => bid.creator?.id !== user?.id && bid.status === 'LIVE').length === 0 && (
             <div className="text-center py-8">
               <div className="text-6xl mb-4">🔍</div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">No active bids</h3>
@@ -437,14 +493,14 @@ r"
                       <div className="flex items-center gap-2 mb-1">
                         <Badge
                           variant="secondary"
-                          className={isWinning ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}
+                          className={isWinning && bid.status === 'CLOSED' ? 'bg-green-100 text-green-800' : getStatusColor(bid.status, bid.endDate)}
                         >
-                          {isWinning ? '🏆 Winning' : '📊 Bidding'}
+                          {isWinning && bid.status === 'CLOSED' ? '🏆 Winning' : getStatusLabel(bid.status, bid.endDate)}
                         </Badge>
                       </div>
-                      <p className="text-lg font-semibold">${myBid?.amount?.toLocaleString() || '0'}</p>
+                      <p className="text-lg font-semibold">₹{myBid?.amount?.toLocaleString() || '0'}</p>
                       <p className="text-sm text-gray-500">
-                        Current: ${(bid.currentPrice || 0).toLocaleString()}
+                        Current: ₹{(bid.currentPrice || 0).toLocaleString()}
                       </p>
                     </div>
                   </div>

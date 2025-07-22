@@ -7,6 +7,17 @@ import { Badge } from '../../components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { useToast } from '../../hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '../../components/ui/alert-dialog';
 
 const AdminUsers = () => {
   const { toast } = useToast();
@@ -17,14 +28,18 @@ const AdminUsers = () => {
     axios
       .get(`${import.meta.env.VITE_API_URL}/api/admin/users`)
       .then((res) => {
-        // Filter out admin users
         const filtered = res.data.filter((u: any) => u.role !== 'admin');
         setUsers(filtered);
       })
       .catch((err) => {
         console.error('Error fetching users:', err);
+        toast({
+          title: 'Error',
+          description: 'Failed to fetch users.',
+          variant: 'destructive',
+        });
       });
-  }, []);
+  }, [toast]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -47,8 +62,6 @@ const AdminUsers = () => {
         return 'bg-green-100 text-green-800';
       case 'aggregator':
         return 'bg-purple-100 text-purple-800';
-      case 'admin':
-        return 'bg-red-100 text-red-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -78,6 +91,48 @@ const AdminUsers = () => {
     }
   };
 
+  const handleRoleChange = async (userId: string, newRole: string) => {
+    try {
+      await axios.patch(`${import.meta.env.VITE_API_URL}/api/admin/users/${userId}/role`, {
+        role: newRole,
+      });
+      setUsers((prev) =>
+        prev.map((user) =>
+          user.id === userId ? { ...user, role: newRole } : user
+        )
+      );
+      toast({
+        title: 'User Role Updated',
+        description: `User role has been changed to ${newRole.replace('_', ' ')}.`,
+      });
+    } catch (error) {
+      console.error('Role update failed:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update user role.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    try {
+      await axios.delete(`${import.meta.env.VITE_API_URL}/api/admin/users/${userId}`);
+      setUsers((prev) => prev.filter((user) => user.id !== userId));
+      toast({
+        title: 'User Deleted',
+        description: 'The user has been successfully deleted.',
+      });
+    } catch (error) {
+      console.error('User deletion failed:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete the user.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const handleViewDocuments = async (userId: string) => {
     try {
       const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/admin/users/${userId}/documents`);
@@ -96,17 +151,16 @@ const AdminUsers = () => {
       <Card>
         <CardHeader>
           <CardTitle>User Management</CardTitle>
-          <CardDescription>Manage user registrations and account status</CardDescription>
+          <CardDescription>Manage user registrations, roles, and account status</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>User Details</TableHead>
-                <TableHead>Role</TableHead>
                 <TableHead>Company</TableHead>
-                <TableHead>Registration Date</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>Change Role</TableHead>
+                <TableHead>Change Status</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -117,40 +171,69 @@ const AdminUsers = () => {
                     <div>
                       <p className="font-semibold">{user.name}</p>
                       <p className="text-sm text-gray-600">{user.email}</p>
+                      <Badge className={`mt-1 ${getRoleColor(user.role)}`}>
+                        {user.role.replace('_', ' ')}
+                      </Badge>
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <Badge className={getRoleColor(user.role)}>
-                      {user.role.replace('_', ' ')}
-                    </Badge>
-                  </TableCell>
                   <TableCell>{user.company}</TableCell>
-                  <TableCell className="text-sm text-gray-600">
-                    {new Date(user.createdAt).toLocaleDateString()}
-                  </TableCell>
                   <TableCell>
-                    <Badge className={getStatusColor(user.isApproved ? 'approved' : 'pending')}>
-                      {user.isApproved ? 'approved' : 'pending'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Select
-                        defaultValue={user.isApproved ? 'approved' : 'pending'}
-                        onValueChange={(value) => handleStatusChange(user.id, value)}
+                     <Select
+                        defaultValue={user.role}
+                        onValueChange={(value) => handleRoleChange(user.id, value)}
                       >
-                        <SelectTrigger className="w-32">
+                        <SelectTrigger className="w-40">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="pending">Pending</SelectItem>
-                          <SelectItem value="approved">Approved</SelectItem>
-                          <SelectItem value="rejected">Rejected</SelectItem>
+                          <SelectItem value="waste_generator">Waste Generator</SelectItem>
+                          <SelectItem value="recycler">Recycler</SelectItem>
+                          <SelectItem value="aggregator">Aggregator</SelectItem>
                         </SelectContent>
                       </Select>
+                  </TableCell>
+                  <TableCell>
+                    <Select
+                      defaultValue={user.isApproved ? 'approved' : 'pending'}
+                      onValueChange={(value) => handleStatusChange(user.id, value)}
+                    >
+                      <SelectTrigger className="w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="approved">Approved</SelectItem>
+                        <SelectItem value="rejected">Rejected</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-2">
                       <Button size="sm" variant="outline" onClick={() => handleViewDocuments(user.id)}>
-                        View Documents
+                        Docs
                       </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button size="sm" variant="destructive">
+                            Delete
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This action cannot be undone. This will permanently delete the user
+                              account and remove their data from our servers.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDeleteUser(user.id)}>
+                              Continue
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -160,7 +243,6 @@ const AdminUsers = () => {
         </CardContent>
       </Card>
 
-      {/* Display selected documents */}
       {selectedDocs.length > 0 && (
         <Card>
           <CardHeader>
@@ -179,38 +261,6 @@ const AdminUsers = () => {
           </CardContent>
         </Card>
       )}
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-2xl font-bold">{users.length}</CardTitle>
-            <CardDescription>Total Users</CardDescription>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-2xl font-bold text-orange-600">
-              {users.filter((u) => !u.isApproved).length}
-            </CardTitle>
-            <CardDescription>Pending Approval</CardDescription>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-2xl font-bold text-green-600">
-              {users.filter((u) => u.isApproved).length}
-            </CardTitle>
-            <CardDescription>Approved Users</CardDescription>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-2xl font-bold text-red-600">0</CardTitle>
-            <CardDescription>Rejected Users</CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
     </div>
   );
 };
