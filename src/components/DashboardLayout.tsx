@@ -7,6 +7,7 @@ import { Badge } from './ui/badge';
 import { Bell } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 import Cookies from 'js-cookie';
+import axios from 'axios';
 
 interface SidebarItem {
   label: string;
@@ -23,6 +24,12 @@ interface Notification {
   isRead: boolean;
 }
 
+// 🔧 Setup Axios instance with credentials and base URL
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_URL,
+  withCredentials: true,
+});
+
 const DashboardLayout = () => {
   const { user, logout } = useAuth();
   const location = useLocation();
@@ -32,7 +39,6 @@ const DashboardLayout = () => {
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    // Load saved notifications from cookies, safely
     const saved = Cookies.get('notifications');
     if (saved) {
       try {
@@ -44,14 +50,21 @@ const DashboardLayout = () => {
       }
     }
 
-    // Initialize socket without forcing transports - allow fallback polling
+    // Optional: fetch missed notifications via API
+    // api.get('/notifications')
+    //   .then((res) => {
+    //     const fetched = res.data as Notification[];
+    //     setNotifications(fetched);
+    //     setUnreadCount(fetched.filter(n => !n.isRead).length);
+    //     Cookies.set('notifications', JSON.stringify(fetched), { expires: 1 / 24 });
+    //   })
+    //   .catch(err => console.error('Failed to fetch notifications', err));
+
     const socket: Socket = io(import.meta.env.VITE_API_URL, {
       withCredentials: true,
-      autoConnect: false, // optional: ensures we add listeners before connecting
-      // transports: ['polling', 'websocket'], // default; you can omit this line
+      autoConnect: false,
     });
 
-    // Attach event listeners first
     socket.on('connect', () => {
       console.log('Socket connected:', socket.id);
     });
@@ -99,10 +112,8 @@ const DashboardLayout = () => {
       upsertNotification(newNotif);
     });
 
-    // Now connect after all listeners attached
     socket.connect();
 
-    // Cleanup on unmount
     return () => {
       socket.disconnect();
     };
