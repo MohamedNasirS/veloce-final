@@ -30,10 +30,13 @@ const DashboardLayout = () => {
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    const socket: Socket = io(`${import.meta.env.VITE_API_URL}`);
+    const socket: Socket = io(import.meta.env.VITE_API_URL, {
+      transports: ['websocket'], // Ensure it prefers WebSocket over polling
+      withCredentials: true,
+    });
 
     socket.on('connect', () => {
-      console.log('DashboardLayout connected to WebSocket server!');
+      console.log('✅ Connected to WebSocket server:', socket.id);
     });
 
     const handleNotification = (notification: Notification) => {
@@ -44,11 +47,11 @@ const DashboardLayout = () => {
     socket.on('notification', handleNotification);
 
     return () => {
-      console.log('DashboardLayout disconnecting WebSocket.');
       socket.off('notification', handleNotification);
       socket.disconnect();
     };
   }, []);
+
 
   const handleLogout = async () => {
     try {
