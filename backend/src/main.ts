@@ -1,4 +1,4 @@
-// main.ts - THIS FILE IS CORRECT, KEEP AS IS
+// main.ts - MODIFIED SLIGHTLY FOR CLARITY AND EXPLICITNESS
 
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
@@ -11,8 +11,11 @@ import { IoAdapter } from '@nestjs/platform-socket.io';
 class CorsIoAdapter extends IoAdapter {
   createIOServer(port: number, options?: any) {
     const corsOptions = {
+      // Explicitly list all allowed origins for Socket.IO
       origin: [ 'http://localhost:8080', 'http://147.93.27.172' ],
-      credentials: true,
+      credentials: true, // Crucial: Allows cookies/auth headers with cross-origin requests
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'], // Standard methods
+      allowedHeaders: ['Content-Type', 'Authorization', 'Accept'], // Standard headers
     };
     options = {
       ...options,
@@ -40,19 +43,22 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
   app.useGlobalPipes(new ValidationPipe());
 
+  // CORS for HTTP endpoints
   app.enableCors({
+    // Explicitly list all allowed origins for HTTP API requests
     origin: [ 'http://localhost:8080', 'http://147.93.27.172' ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   });
 
-  // Use the custom IoAdapter with explicit CORS config
+  // Use the custom IoAdapter with explicit CORS config for WebSockets
   app.useWebSocketAdapter(new CorsIoAdapter(app));
 
-  await app.listen(3001, '0.0.0.0');
+  await app.listen(3001, '0.0.0.0'); // Listen on all available network interfaces
 
-  const baseUrl = 'http://localhost:3001';
+  // Corrected base URL for console log to reflect VPS access
+  const baseUrl = 'http://147.93.27.172:3001';
   console.log(`✅ Server running at ${baseUrl}`);
   console.log(`🔗 Swagger: ${baseUrl}/api`);
   console.log(`📁 Static files served from ${baseUrl}/uploads/...`);

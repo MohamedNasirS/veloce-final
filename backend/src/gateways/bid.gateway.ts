@@ -1,4 +1,4 @@
-// bid.gateway.ts - MODIFY THIS FILE
+// bid.gateway.ts - NO CHANGES REQUIRED FOR CORS
 
 import {
   WebSocketGateway,
