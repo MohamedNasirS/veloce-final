@@ -32,18 +32,36 @@ const DashboardLayout = () => {
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
+    // Load saved notifications from cookies, safely
     const saved = Cookies.get('notifications');
     if (saved) {
       try {
         const parsed: Notification[] = JSON.parse(saved);
         setNotifications(parsed);
         setUnreadCount(parsed.filter(n => !n.isRead).length);
-      } catch {}
+      } catch (e) {
+        console.warn('Failed to parse notifications cookie', e);
+      }
     }
 
+    // Initialize socket without forcing transports - allow fallback polling
     const socket: Socket = io(import.meta.env.VITE_API_URL, {
-      transports: ['websocket'],
       withCredentials: true,
+      autoConnect: false, // optional: ensures we add listeners before connecting
+      // transports: ['polling', 'websocket'], // default; you can omit this line
+    });
+
+    // Attach event listeners first
+    socket.on('connect', () => {
+      console.log('Socket connected:', socket.id);
+    });
+
+    socket.on('connect_error', (error) => {
+      console.error('Socket connection error:', error);
+    });
+
+    socket.on('disconnect', (reason) => {
+      console.log('Socket disconnected:', reason);
     });
 
     const upsertNotification = (newNotif: Notification) => {
@@ -67,7 +85,7 @@ const DashboardLayout = () => {
     });
 
     socket.on('bidUpdated', (bid: any) => {
-      const isClosed = bid.status === 'CLOSED';
+      const isClosed = bid.status?.toLowerCase() === 'closed' || bid.status === 'CLOSED';
       const newNotif: Notification = {
         id: crypto.randomUUID(),
         type: isClosed ? 'BID_CLOSED' : 'BID_LIVE',
@@ -81,6 +99,10 @@ const DashboardLayout = () => {
       upsertNotification(newNotif);
     });
 
+    // Now connect after all listeners attached
+    socket.connect();
+
+    // Cleanup on unmount
     return () => {
       socket.disconnect();
     };
@@ -91,7 +113,9 @@ const DashboardLayout = () => {
       await logout();
       Cookies.remove('notifications');
       navigate('/login');
-    } catch {}
+    } catch (err) {
+      console.error('Logout error:', err);
+    }
   };
 
   const markAllAsRead = () => {
@@ -151,7 +175,7 @@ const DashboardLayout = () => {
           </div>
         </div>
 
-        <nav className="flex-1 p-4">
+        <nav className="flex-1 p-4 overflow-y-auto">
           <ul className="space-y-2">
             {sidebarItems.map((item) => (
               <li key={item.path}>
@@ -168,6 +192,7 @@ const DashboardLayout = () => {
                 </Link>
               </li>
             ))}
+
             <li>
               <Popover>
                 <PopoverTrigger asChild>
@@ -194,10 +219,7 @@ const DashboardLayout = () => {
                     {notifications.length > 0 ? (
                       <div className="space-y-1 max-h-80 overflow-y-auto">
                         {notifications.slice(0, 5).map((notif) => (
-                          <div
-                            key={notif.id}
-                            className="text-sm p-3 bg-gray-50 rounded-md"
-                          >
+                          <div key={notif.id} className="text-sm p-3 bg-gray-50 rounded-md">
                             <p className="font-medium">
                               {notif.type === 'BID_LIVE' ? '🟢 Auction Live' : '🔴 Auction Closed'}
                             </p>

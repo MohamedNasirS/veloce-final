@@ -10,7 +10,11 @@ import { Logger } from '@nestjs/common';
 
 @WebSocketGateway({
   cors: {
-    origin: '*', // In production, restrict this to your frontend's domain
+    origin: [
+      'http://localhost:8080',
+      'http://147.93.27.172',
+    ],
+    credentials: true,
   },
 })
 export class BidGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
@@ -29,20 +33,11 @@ export class BidGateway implements OnGatewayInit, OnGatewayConnection, OnGateway
     this.logger.log(`Client disconnected: ${client.id}`);
   }
 
-  /**
-   * Emits a general 'bidUpdated' event to all clients.
-   * This is used to keep the live bid list in sync.
-   * @param bid The updated bid object.
-   */
   emitBidUpdate(bid: any) {
     this.logger.log(`Emitting 'bidUpdated' for bid ID: ${bid.id}`);
     this.server.emit('bidUpdated', bid);
   }
 
-  /**
-   * Emits a 'notification' event when a new bid goes live.
-   * @param bid The bid that just went live.
-   */
   emitNewBidLive(bid: any) {
     const notification = {
       id: `live-${bid.id}-${Date.now()}`,
@@ -55,10 +50,6 @@ export class BidGateway implements OnGatewayInit, OnGatewayConnection, OnGateway
     this.server.emit('notification', notification);
   }
 
-  /**
-   * Emits a 'notification' event when a bid is closed.
-   * @param bid The bid that has just closed.
-   */
   emitBidClosed(bid: any) {
     const notification = {
       id: `closed-${bid.id}-${Date.now()}`,
