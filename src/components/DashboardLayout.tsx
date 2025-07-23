@@ -6,6 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Badge } from './ui/badge';
 import { Bell } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
+import Cookies from 'js-cookie';
 
 interface SidebarItem {
   label: string;
@@ -19,6 +20,7 @@ interface Notification {
   message: string;
   bidId: string;
   timestamp: string;
+  isRead: boolean;
 }
 
 const DashboardLayout = () => {
@@ -30,36 +32,73 @@ const DashboardLayout = () => {
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
+    const saved = Cookies.get('notifications');
+    if (saved) {
+      try {
+        const parsed: Notification[] = JSON.parse(saved);
+        setNotifications(parsed);
+        setUnreadCount(parsed.filter(n => !n.isRead).length);
+      } catch {}
+    }
+
     const socket: Socket = io(import.meta.env.VITE_API_URL, {
-      transports: ['websocket'], // Ensure it prefers WebSocket over polling
+      transports: ['websocket'],
       withCredentials: true,
     });
 
-    socket.on('connect', () => {
-      console.log('✅ Connected to WebSocket server:', socket.id);
-    });
-
-    const handleNotification = (notification: Notification) => {
-      setNotifications(prev => [notification, ...prev].slice(0, 20));
-      setUnreadCount(prev => prev + 1);
+    const upsertNotification = (newNotif: Notification) => {
+      setNotifications(prev => {
+        const deduped = prev.filter(n => !(n.bidId === newNotif.bidId && n.type === newNotif.type));
+        const updated = [newNotif, ...deduped].slice(0, 5);
+        Cookies.set('notifications', JSON.stringify(updated), { expires: 1 / 24 });
+        setUnreadCount(updated.filter(n => !n.isRead).length);
+        return updated;
+      });
     };
 
-    socket.on('notification', handleNotification);
+    socket.on('notification', (notif: Omit<Notification, 'id' | 'timestamp' | 'isRead'>) => {
+      const newNotif: Notification = {
+        ...notif,
+        id: crypto.randomUUID(),
+        timestamp: new Date().toISOString(),
+        isRead: false,
+      };
+      upsertNotification(newNotif);
+    });
+
+    socket.on('bidUpdated', (bid: any) => {
+      const isClosed = bid.status === 'CLOSED';
+      const newNotif: Notification = {
+        id: crypto.randomUUID(),
+        type: isClosed ? 'BID_CLOSED' : 'BID_LIVE',
+        message: isClosed
+          ? `Auction for "${bid.lotName}" has been closed.`
+          : `Auction for "${bid.lotName}" is now live!`,
+        bidId: bid.id,
+        timestamp: new Date().toISOString(),
+        isRead: false,
+      };
+      upsertNotification(newNotif);
+    });
 
     return () => {
-      socket.off('notification', handleNotification);
       socket.disconnect();
     };
   }, []);
 
-
   const handleLogout = async () => {
     try {
       await logout();
+      Cookies.remove('notifications');
       navigate('/login');
-    } catch (error) {
-      console.error("Failed to log out:", error);
-    }
+    } catch {}
+  };
+
+  const markAllAsRead = () => {
+    const updated = notifications.map(n => ({ ...n, isRead: true }));
+    setNotifications(updated);
+    setUnreadCount(0);
+    Cookies.set('notifications', JSON.stringify(updated), { expires: 1 / 24 });
   };
 
   const getSidebarItems = (): SidebarItem[] => {
@@ -83,8 +122,8 @@ const DashboardLayout = () => {
           { label: 'Dashboard', path: '/dashboard/admin', icon: '🏠' },
           { label: 'Users', path: '/dashboard/admin/users', icon: '👥' },
           { label: 'Bids', path: '/dashboard/admin/bids', icon: '📋' },
-          { label: 'Winner Selection', path: '/dashboard/admin/winner-selection', icon: '🏆' }, // Added for admin
-          { label: 'Gate Passes', path: '/dashboard/admin/gate-passes', icon: '🎫' }, // Added for admin
+          { label: 'Winner Selection', path: '/dashboard/admin/winner-selection', icon: '🏆' },
+          { label: 'Gate Passes', path: '/dashboard/admin/gate-passes', icon: '🎫' },
         ];
       default:
         return [];
@@ -92,10 +131,6 @@ const DashboardLayout = () => {
   };
 
   const sidebarItems = getSidebarItems();
-
-  const handleNotificationClick = (notification: Notification) => {
-    navigate(`/bid/${notification.bidId}`);
-  };
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -140,7 +175,9 @@ const DashboardLayout = () => {
                     <Bell className="h-5 w-5" />
                     {sidebarOpen && <span>Notifications</span>}
                     {unreadCount > 0 && (
-                      <Badge variant="destructive" className="absolute top-1 right-1 h-5 w-5 flex items-center justify-center p-0">{unreadCount}</Badge>
+                      <Badge variant="destructive" className="absolute top-1 right-1 h-5 w-5 flex items-center justify-center p-0">
+                        {unreadCount}
+                      </Badge>
                     )}
                   </button>
                 </PopoverTrigger>
@@ -149,20 +186,21 @@ const DashboardLayout = () => {
                     <div className="flex justify-between items-center mb-2 px-3 pt-2">
                       <h4 className="font-medium leading-none">Notifications</h4>
                       {unreadCount > 0 && (
-                        <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => setUnreadCount(0)}>
+                        <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={markAllAsRead}>
                           Mark all as read
                         </Button>
                       )}
                     </div>
                     {notifications.length > 0 ? (
                       <div className="space-y-1 max-h-80 overflow-y-auto">
-                        {notifications.map((notif) => (
+                        {notifications.slice(0, 5).map((notif) => (
                           <div
                             key={notif.id}
-                            className="text-sm p-3 hover:bg-gray-100 rounded-md cursor-pointer"
-                            onClick={() => handleNotificationClick(notif)}
+                            className="text-sm p-3 bg-gray-50 rounded-md"
                           >
-                            <p className="font-medium">{notif.type === 'BID_LIVE' ? '🟢 New Bid Live' : '🔴 Bid Closed'}</p>
+                            <p className="font-medium">
+                              {notif.type === 'BID_LIVE' ? '🟢 Auction Live' : '🔴 Auction Closed'}
+                            </p>
                             <p className="text-gray-600">{notif.message}</p>
                             <p className="text-xs text-gray-500 mt-1">
                               {new Date(notif.timestamp).toLocaleString()}
