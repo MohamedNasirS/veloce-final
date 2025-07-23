@@ -1,4 +1,5 @@
-// main.ts
+// main.ts - THIS FILE IS CORRECT, KEEP AS IS
+
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
