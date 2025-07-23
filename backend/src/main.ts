@@ -65,7 +65,7 @@ async function bootstrap() {
   app.useWebSocketAdapter(new CorsIoAdapter(app));
 
   await app.listen(3001, '0.0.0.0');
-  const baseUrl = 'http://localhost:3001';
+  const baseUrl = 'http://147.93.27.172:3001';
   console.log(`✅ Server running at ${baseUrl}`);
   console.log(`🔗 Swagger: ${baseUrl}/api`);
   console.log(`📁 Static files served from ${baseUrl}/uploads/...`);
