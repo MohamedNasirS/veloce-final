@@ -1,4 +1,4 @@
-// main.ts - MODIFIED SLIGHTLY FOR CLARITY AND EXPLICITNESS
+// main.ts - Keep as is (from previous complete response)
 
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
@@ -11,11 +11,10 @@ import { IoAdapter } from '@nestjs/platform-socket.io';
 class CorsIoAdapter extends IoAdapter {
   createIOServer(port: number, options?: any) {
     const corsOptions = {
-      // Explicitly list all allowed origins for Socket.IO
       origin: [ 'http://localhost:8080', 'http://147.93.27.172' ],
-      credentials: true, // Crucial: Allows cookies/auth headers with cross-origin requests
-      methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'], // Standard methods
-      allowedHeaders: ['Content-Type', 'Authorization', 'Accept'], // Standard headers
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
     };
     options = {
       ...options,
@@ -43,21 +42,17 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
   app.useGlobalPipes(new ValidationPipe());
 
-  // CORS for HTTP endpoints
   app.enableCors({
-    // Explicitly list all allowed origins for HTTP API requests
     origin: [ 'http://localhost:8080', 'http://147.93.27.172' ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   });
 
-  // Use the custom IoAdapter with explicit CORS config for WebSockets
-  app.useWebSocketAdapter(new CorsIoAdapter(app));
+  app.useWebSocketAdapter(new CorsIoAdapter(app)); // Keep this, even if Gateway explicitly sets CORS
 
-  await app.listen(3001, '0.0.0.0'); // Listen on all available network interfaces
+  await app.listen(3001, '0.0.0.0');
 
-  // Corrected base URL for console log to reflect VPS access
   const baseUrl = 'http://147.93.27.172:3001';
   console.log(`✅ Server running at ${baseUrl}`);
   console.log(`🔗 Swagger: ${baseUrl}/api`);

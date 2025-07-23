@@ -1,4 +1,4 @@
-// bid.gateway.ts - NO CHANGES REQUIRED FOR CORS
+// bid.gateway.ts - KEEP THIS MODIFIED VERSION
 
 import {
   WebSocketGateway,
@@ -10,9 +10,14 @@ import {
 import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 
-// REMOVED the cors configuration from here to avoid conflicts.
-// The CorsIoAdapter in main.ts will handle it.
-@WebSocketGateway()
+@WebSocketGateway({
+  cors: {
+    origin: ['http://localhost:8080', 'http://147.93.27.172'], // Your frontend origins
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  },
+})
 export class BidGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server;
   private logger: Logger = new Logger('BidGateway');
