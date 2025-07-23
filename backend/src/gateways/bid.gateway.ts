@@ -1,5 +1,3 @@
-// bid.gateway.ts - KEEP THIS MODIFIED VERSION
-
 import {
   WebSocketGateway,
   WebSocketServer,
@@ -12,7 +10,7 @@ import { Logger } from '@nestjs/common';
 
 @WebSocketGateway({
   cors: {
-    origin: ['http://localhost:8080', 'http://147.93.27.172'], // Your frontend origins
+    origin: ['http://localhost:8080', 'http://147.93.27.172'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
@@ -26,7 +24,7 @@ export class BidGateway implements OnGatewayInit, OnGatewayConnection, OnGateway
     this.logger.log('WebSocket Gateway Initialized');
   }
 
-  handleConnection(client: Socket, ...args: any[]) {
+  handleConnection(client: Socket) {
     this.logger.log(`Client connected: ${client.id}`);
   }
 

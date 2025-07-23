@@ -1,5 +1,3 @@
-// main.ts - Keep as is (from previous complete response)
-
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
@@ -10,8 +8,15 @@ import { IoAdapter } from '@nestjs/platform-socket.io';
 
 class CorsIoAdapter extends IoAdapter {
   createIOServer(port: number, options?: any) {
+    const allowedOrigins = ['http://localhost:8080', 'http://147.93.27.172'];
     const corsOptions = {
-      origin: [ 'http://localhost:8080', 'http://147.93.27.172' ],
+      origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error('Not allowed by CORS'));
+        }
+      },
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
@@ -42,21 +47,27 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
   app.useGlobalPipes(new ValidationPipe());
 
+  const allowedOrigins = ['http://localhost:8080', 'http://147.93.27.172'];
+
   app.enableCors({
-    origin: [ 'http://localhost:8080', 'http://147.93.27.172' ],
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   });
 
-  app.useWebSocketAdapter(new CorsIoAdapter(app)); // Keep this, even if Gateway explicitly sets CORS
+  app.useWebSocketAdapter(new CorsIoAdapter(app));
 
   await app.listen(3001, '0.0.0.0');
-
-  const baseUrl = 'http://147.93.27.172:3001';
+  const baseUrl = 'http://localhost:3001';
   console.log(`✅ Server running at ${baseUrl}`);
   console.log(`🔗 Swagger: ${baseUrl}/api`);
   console.log(`📁 Static files served from ${baseUrl}/uploads/...`);
 }
-
 bootstrap();
