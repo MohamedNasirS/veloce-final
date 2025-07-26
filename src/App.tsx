@@ -45,7 +45,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <AuthProvider>
-        <BrowserRouter>
+        <BrowserRouter basename="/marketplace">
           <Routes>
             {/* Public routes */}
             <Route path="/" element={<Layout><Landing /></Layout>} />
