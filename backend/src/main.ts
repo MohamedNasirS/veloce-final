@@ -14,7 +14,10 @@ class CorsIoAdapter extends IoAdapter {
   }
 
   createIOServer(port: number, options?: any): any {
-    const allowedOrigins = ['http://147.93.27.172', 'http://localhost:8080'];
+    const allowedOrigins = [
+      'http://147.93.27.172/marketplace',
+      'http://localhost:8080/marketplace',
+    ];
 
     const corsOptions = {
       origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
@@ -48,13 +51,18 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup('api', app, document);
 
+  // ✅ Serve Swagger under /marketplace/api
+  SwaggerModule.setup('marketplace/api', app, document);
+
+  // ✅ Still use 'api' as global backend route prefix
   app.setGlobalPrefix('api');
   app.useGlobalPipes(new ValidationPipe());
 
-  // ✅ Same CORS config for HTTP
-  const allowedOrigins = ['http://147.93.27.172', 'http://localhost:8080'];
+  const allowedOrigins = [
+    'http://147.93.27.172/marketplace',
+    'http://localhost:8080/marketplace',
+  ];
 
   app.enableCors({
     origin: (origin, callback) => {
@@ -69,13 +77,12 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   });
 
-  // ✅ Use custom CORS adapter for Socket.IO
   app.useWebSocketAdapter(new CorsIoAdapter(app));
 
   await app.listen(3001, '0.0.0.0');
   const baseUrl = 'http://147.93.27.172:3001';
   console.log(`✅ Server running at ${baseUrl}`);
-  console.log(`🔗 Swagger: ${baseUrl}/api`);
+  console.log(`🔗 Swagger: ${baseUrl}/marketplace/api`);
   console.log(`📁 Static files served from ${baseUrl}/uploads/...`);
 }
 bootstrap();
