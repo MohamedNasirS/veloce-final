@@ -58,7 +58,7 @@ const LiveBids = () => {
     fetchLiveBids();
 
     const handleBidUpdated = (updatedBid: Bid) => {
-      console.log('Received bid update:', updatedBid);
+      //console.log('Received bid update:', updatedBid);
       setBids(prevBids => {
         const existingBidIndex = prevBids.findIndex(b => b.id === updatedBid.id);
 
