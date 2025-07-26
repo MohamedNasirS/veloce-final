@@ -79,6 +79,15 @@ const DashboardLayout = () => {
       console.log('Socket disconnected:', reason);
     });
 
+    // ✅ Fallback UUID generator
+    const generateUUID = () => {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    };
+
     const upsertNotification = (newNotif: Notification) => {
       setNotifications(prev => {
         const deduped = prev.filter(n => !(n.bidId === newNotif.bidId && n.type === newNotif.type));
@@ -92,7 +101,7 @@ const DashboardLayout = () => {
     socket.on('notification', (notif: Omit<Notification, 'id' | 'timestamp' | 'isRead'>) => {
       const newNotif: Notification = {
         ...notif,
-        id: crypto.randomUUID(),
+        id: generateUUID(), // ✅ replaced crypto.randomUUID()
         timestamp: new Date().toISOString(),
         isRead: false,
       };
@@ -102,7 +111,7 @@ const DashboardLayout = () => {
     socket.on('bidUpdated', (bid: any) => {
       const isClosed = bid.status?.toLowerCase() === 'closed' || bid.status === 'CLOSED';
       const newNotif: Notification = {
-        id: crypto.randomUUID(),
+        id: generateUUID(), // ✅ replaced crypto.randomUUID()
         type: isClosed ? 'BID_CLOSED' : 'BID_LIVE',
         message: isClosed
           ? `Auction for "${bid.lotName}" has been closed.`
@@ -113,6 +122,7 @@ const DashboardLayout = () => {
       };
       upsertNotification(newNotif);
     });
+
 
     socket.connect();
 
