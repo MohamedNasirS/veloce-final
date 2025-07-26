@@ -47,7 +47,7 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
   app.useGlobalPipes(new ValidationPipe());
 
-  const allowedOrigins = ['http://localhost:8080', 'http://147.93.27.172'];
+  const allowedOrigins = ['http://147.93.27.172', 'http://localhost:8080'];
 
   app.enableCors({
     origin: (origin, callback) => {
