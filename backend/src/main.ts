@@ -7,7 +7,6 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { INestApplication } from '@nestjs/common';
 
-// ✅ Custom WebSocket CORS adapter
 class CorsIoAdapter extends IoAdapter {
   constructor(private app: INestApplication) {
     super(app);
@@ -40,6 +39,7 @@ class CorsIoAdapter extends IoAdapter {
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
+  // Static uploads under /uploads
   app.useStaticAssets(path.resolve(__dirname, '..', 'uploads'), {
     prefix: '/uploads',
   });
@@ -52,10 +52,9 @@ async function bootstrap() {
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);
 
-  // ✅ Serve Swagger under /marketplace/api
-  SwaggerModule.setup('marketplace/api', app, document);
+  // Swagger accessible under /marketplace/api via Nginx rewrite
+  SwaggerModule.setup('api', app, document);
 
-  // ✅ Still use 'api' as global backend route prefix
   app.setGlobalPrefix('api');
   app.useGlobalPipes(new ValidationPipe());
 
@@ -82,7 +81,7 @@ async function bootstrap() {
   await app.listen(3001, '0.0.0.0');
   const baseUrl = 'http://147.93.27.172:3001';
   console.log(`✅ Server running at ${baseUrl}`);
-  console.log(`🔗 Swagger: ${baseUrl}/marketplace/api`);
+  console.log(`🔗 Swagger: ${baseUrl}/api`);
   console.log(`📁 Static files served from ${baseUrl}/uploads/...`);
 }
 bootstrap();
