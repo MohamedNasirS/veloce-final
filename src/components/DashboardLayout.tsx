@@ -59,11 +59,13 @@ const DashboardLayout = () => {
     //     Cookies.set('notifications', JSON.stringify(fetched), { expires: 1 / 24 });
     //   })
     //   .catch(err => console.error('Failed to fetch notifications', err));
-
+    
     const socket: Socket = io(import.meta.env.VITE_API_URL, {
+      transports: ['websocket'], // force only websocket
       withCredentials: true,
       autoConnect: false,
     });
+
 
     socket.on('connect', () => {
       console.log('Socket connected:', socket.id);
