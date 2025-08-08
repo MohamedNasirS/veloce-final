@@ -16,7 +16,7 @@ const AdminDashboard = () => {
       try {
         const [bidsRes, usersRes, pendingBidsRes] = await Promise.all([
           axios.get(`${import.meta.env.VITE_API_URL}/api/bids`),
-          axios.get(`${import.meta.env.VITE_API_URL}/api/users`),
+          axios.get(`${import.meta.env.VITE_API_URL}/api/admin/users`),
           axios.get(`${import.meta.env.VITE_API_URL}/api/bids/pending`),
         ]);
         setBids(bidsRes.data);
@@ -165,12 +165,12 @@ const AdminDashboard = () => {
                   <p className="text-sm text-gray-500">{bid.location}</p>
                 </div>
                 <div className="text-right">
-                  <Badge 
-                    variant="secondary" 
+                  <Badge
+                    variant="secondary"
                     className={
                       bid.status === 'LIVE' ? 'bg-green-100 text-green-800' :
-                      bid.status === 'CLOSED' ? 'bg-gray-300 text-gray-800' :
-                      'bg-yellow-100 text-yellow-800'
+                        bid.status === 'CLOSED' ? 'bg-gray-300 text-gray-800' :
+                          'bg-yellow-100 text-yellow-800'
                     }
                   >
                     {bid.status}

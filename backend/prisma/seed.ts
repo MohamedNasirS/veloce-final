@@ -1,4 +1,4 @@
-import { PrismaClient, Role } from '@prisma/client';
+import { PrismaClient, Role, UserStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import * as dotenv from 'dotenv';
 
@@ -33,7 +33,7 @@ async function main() {
       company: 'WasteBid HQ',
       role: Role.admin, // ✅ Using enum value
       address: 'Main Office',
-      isApproved: true,
+      status: UserStatus.APPROVED,
     },
   });
 

@@ -8,14 +8,14 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import * as path from 'path';
 import * as fs from 'fs/promises';
-import { Role } from '@prisma/client'; 
+import { Role, UserStatus } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
-  ) {}
+  ) { }
 
   async register(userData: any, files: any) {
     try {
@@ -55,7 +55,7 @@ export class AuthService {
           registrationNumber,
           taxId,
           description,
-          isApproved: false,
+          status: UserStatus.PENDING,
         },
       });
 
@@ -116,45 +116,45 @@ export class AuthService {
 
 
   async login(email: string, password: string) {
-  try {
-    const user = await this.prisma.user.findUnique({
-      where: { email },
-    });
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { email },
+      });
 
-    if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
+      if (!user) {
+        throw new UnauthorizedException('Invalid credentials');
+      }
 
-    if (!user.isApproved) {
-      throw new UnauthorizedException('Your account is not approved yet. Please wait for admin approval.');
-    }
+      if (user.status !== UserStatus.APPROVED) {
+        throw new UnauthorizedException('Your account is not approved yet. Please wait for admin approval.');
+      }
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+      if (!isPasswordValid) {
+        throw new UnauthorizedException('Invalid credentials');
+      }
 
-    const payload = {
-      sub: user.id,
-      email: user.email,
-      role: user.role,
-    };
-
-    return {
-      success: true,
-      access_token: this.jwtService.sign(payload),
-      user: {
-        id: user.id,
+      const payload = {
+        sub: user.id,
         email: user.email,
         role: user.role,
-        name: user.name,
-      },
-    };
-  } catch (error) {
-    console.error('Login error:', error);
-    throw error;
+      };
+
+      return {
+        success: true,
+        access_token: this.jwtService.sign(payload),
+        user: {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          name: user.name,
+        },
+      };
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
+    }
   }
-}
 
 
   async getUserDocuments(userId: string) {

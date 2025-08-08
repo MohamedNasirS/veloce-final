@@ -1,11 +1,11 @@
 // src/modules/admin/admin.service.ts
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Role } from '@prisma/client'; // Corrected import from UserRole to Role
+import { Role, UserStatus } from '@prisma/client'; // Corrected import from UserRole to Role
 
 @Injectable()
 export class AdminService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async getAllUsers() {
     return this.prisma.user.findMany({
@@ -27,14 +27,15 @@ export class AdminService {
       throw new NotFoundException('User not found');
     }
 
-    let isApproved = user.isApproved;
-    if (status === 'approved') isApproved = true;
-    if (status === 'rejected' || status === 'pending') isApproved = false;
+    let userStatus: UserStatus;
+    if (status === 'approved') userStatus = UserStatus.APPROVED;
+    else if (status === 'rejected') userStatus = UserStatus.REJECTED;
+    else userStatus = UserStatus.PENDING;
 
     return this.prisma.user.update({
       where: { id: userId },
       data: {
-        isApproved: isApproved,
+        status: userStatus,
       },
     });
   }
@@ -49,7 +50,7 @@ export class AdminService {
     }
 
     if (role === 'admin') {
-        throw new Error("Cannot assign admin role.");
+      throw new Error("Cannot assign admin role.");
     }
 
     return this.prisma.user.update({
@@ -62,7 +63,7 @@ export class AdminService {
 
   async deleteUser(userId: string) {
     console.log(`[AdminService] Deleting user with ID: ${userId}`);
-    
+
     try {
       const user = await this.prisma.user.findUnique({
         where: { id: userId },
@@ -87,37 +88,37 @@ export class AdminService {
       // Disassociate from bids they won
       console.log(`[AdminService] Updating bids won by user ${userId}`);
       await this.prisma.bid.updateMany({
-          where: { winnerId: userId },
-          data: { winnerId: null },
+        where: { winnerId: userId },
+        data: { winnerId: null },
       });
-      
+
       // Delete their participation records
       console.log(`[AdminService] Deleting bid participation records for user ${userId}`);
       await this.prisma.bidParticipant.deleteMany({
-          where: { userId: userId },
+        where: { userId: userId },
       });
 
       // Delete events they triggered
       console.log(`[AdminService] Deleting bid events triggered by user ${userId}`);
       await this.prisma.bidEvent.deleteMany({
-          where: { userId: userId },
+        where: { userId: userId },
       });
-      
+
       // Handle bids they created (e.g., delete them or reassign)
       // For now, let's delete them. Be careful with this in production.
       console.log(`[AdminService] Finding bids created by user ${userId}`);
       const createdBids = await this.prisma.bid.findMany({
-          where: { creatorId: userId },
-          include: { images: true, participants: true, events: true },
+        where: { creatorId: userId },
+        include: { images: true, participants: true, events: true },
       });
 
       console.log(`[AdminService] Found ${createdBids.length} bids created by user ${userId}`);
       for (const bid of createdBids) {
-          console.log(`[AdminService] Deleting related records for bid ${bid.id}`);
-          await this.prisma.bidImage.deleteMany({ where: { bidId: bid.id }});
-          await this.prisma.bidParticipant.deleteMany({ where: { bidId: bid.id }});
-          await this.prisma.bidEvent.deleteMany({ where: { bidId: bid.id }});
-          await this.prisma.bid.delete({ where: { id: bid.id }});
+        console.log(`[AdminService] Deleting related records for bid ${bid.id}`);
+        await this.prisma.bidImage.deleteMany({ where: { bidId: bid.id } });
+        await this.prisma.bidParticipant.deleteMany({ where: { bidId: bid.id } });
+        await this.prisma.bidEvent.deleteMany({ where: { bidId: bid.id } });
+        await this.prisma.bid.delete({ where: { id: bid.id } });
       }
 
       // Finally, delete the user
@@ -125,7 +126,7 @@ export class AdminService {
       const result = await this.prisma.user.delete({
         where: { id: userId },
       });
-      
+
       console.log(`[AdminService] User ${userId} deleted successfully`);
       return result;
     } catch (error) {

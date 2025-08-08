@@ -24,21 +24,23 @@ const AdminUsers = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [selectedDocs, setSelectedDocs] = useState<any[]>([]);
 
-  useEffect(() => {
-    axios
-      .get(`${import.meta.env.VITE_API_URL}/api/admin/users`)
-      .then((res) => {
-        const filtered = res.data.filter((u: any) => u.role !== 'admin');
-        setUsers(filtered);
-      })
-      .catch((err) => {
-        console.error('Error fetching users:', err);
-        toast({
-          title: 'Error',
-          description: 'Failed to fetch users.',
-          variant: 'destructive',
-        });
+  const fetchUsers = async () => {
+    try {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/admin/users`);
+      const filtered = res.data.filter((u: any) => u.role !== 'admin');
+      setUsers(filtered);
+    } catch (err) {
+      console.error('Error fetching users:', err);
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch users.',
+        variant: 'destructive',
       });
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
   }, [toast]);
 
   const getStatusColor = (status: string) => {
@@ -72,11 +74,10 @@ const AdminUsers = () => {
       await axios.patch(`${import.meta.env.VITE_API_URL}/api/admin/users/${userId}/status`, {
         status: newStatus,
       });
-      setUsers((prev) =>
-        prev.map((user) =>
-          user.id === userId ? { ...user, isApproved: newStatus === 'approved' } : user
-        )
-      );
+
+      // Refresh the users data from the server to ensure we have the latest state
+      await fetchUsers();
+
       toast({
         title: 'User Status Updated',
         description: `User status has been changed to ${newStatus}.`,
@@ -96,11 +97,10 @@ const AdminUsers = () => {
       await axios.patch(`${import.meta.env.VITE_API_URL}/api/admin/users/${userId}/role`, {
         role: newRole,
       });
-      setUsers((prev) =>
-        prev.map((user) =>
-          user.id === userId ? { ...user, role: newRole } : user
-        )
-      );
+
+      // Refresh the users data from the server to ensure we have the latest state
+      await fetchUsers();
+
       toast({
         title: 'User Role Updated',
         description: `User role has been changed to ${newRole.replace('_', ' ')}.`,
@@ -118,11 +118,11 @@ const AdminUsers = () => {
   const handleDeleteUser = async (userId: string) => {
     try {
       console.log(`Attempting to delete user with ID: ${userId}`);
-      
+
       // Try different approaches to handle CORS and routing issues
       let success = false;
       let response;
-      
+
       // Approach 1: Use the environment variable (standard approach)
       try {
         console.log('Trying standard approach with environment variable');
@@ -131,7 +131,7 @@ const AdminUsers = () => {
         success = true;
       } catch (error1) {
         console.error('Standard approach failed:', error1);
-        
+
         // Approach 2: Direct URL to localhost (works in test script)
         try {
           console.log('Trying direct localhost URL');
@@ -140,7 +140,7 @@ const AdminUsers = () => {
           success = true;
         } catch (error2) {
           console.error('Direct localhost approach failed:', error2);
-          
+
           // Approach 3: Use production URL
           try {
             console.log('Trying production URL');
@@ -149,7 +149,7 @@ const AdminUsers = () => {
             success = true;
           } catch (error3) {
             console.error('Production URL approach failed:', error3);
-            
+
             // Approach 4: Use fetch instead of axios
             try {
               console.log('Trying fetch API');
@@ -159,7 +159,7 @@ const AdminUsers = () => {
                   'Content-Type': 'application/json',
                 }
               });
-              
+
               if (fetchResponse.ok) {
                 response = { data: await fetchResponse.json() };
                 console.log('Fetch API approach successful:', response.data);
@@ -173,9 +173,10 @@ const AdminUsers = () => {
           }
         }
       }
-      
+
       if (success) {
-        setUsers((prev) => prev.filter((user) => user.id !== userId));
+        // Refresh the users data from the server to ensure we have the latest state
+        await fetchUsers();
         toast({
           title: 'User Deleted',
           description: 'The user has been successfully deleted.',
@@ -185,7 +186,7 @@ const AdminUsers = () => {
       }
     } catch (error) {
       console.error('User deletion failed:', error);
-      
+
       // Show more detailed error information
       let errorMessage = 'Failed to delete the user.';
       if (error.response) {
@@ -195,7 +196,7 @@ const AdminUsers = () => {
       } else {
         errorMessage += ` ${error.message}`;
       }
-      
+
       toast({
         title: 'Error',
         description: errorMessage,
@@ -242,30 +243,35 @@ const AdminUsers = () => {
                     <div>
                       <p className="font-semibold">{user.name}</p>
                       <p className="text-sm text-gray-600">{user.email}</p>
-                      <Badge className={`mt-1 ${getRoleColor(user.role)}`}>
-                        {user.role.replace('_', ' ')}
-                      </Badge>
+                      <div className="flex gap-2 mt-1">
+                        <Badge className={`${getRoleColor(user.role)}`}>
+                          {user.role.replace('_', ' ')}
+                        </Badge>
+                        <Badge className={`${getStatusColor(user.status ? user.status.toLowerCase() : 'pending')}`}>
+                          {user.status ? user.status.toLowerCase() : 'pending'}
+                        </Badge>
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell>{user.company}</TableCell>
                   <TableCell>
-                     <Select
-                        defaultValue={user.role}
-                        onValueChange={(value) => handleRoleChange(user.id, value)}
-                      >
-                        <SelectTrigger className="w-40">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="waste_generator">Waste Generator</SelectItem>
-                          <SelectItem value="recycler">Recycler</SelectItem>
-                          <SelectItem value="aggregator">Aggregator</SelectItem>
-                        </SelectContent>
-                      </Select>
+                    <Select
+                      value={user.role}
+                      onValueChange={(value) => handleRoleChange(user.id, value)}
+                    >
+                      <SelectTrigger className="w-40">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="waste_generator">Waste Generator</SelectItem>
+                        <SelectItem value="recycler">Recycler</SelectItem>
+                        <SelectItem value="aggregator">Aggregator</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </TableCell>
                   <TableCell>
                     <Select
-                      defaultValue={user.isApproved ? 'approved' : 'pending'}
+                      value={user.status ? user.status.toLowerCase() : 'pending'}
                       onValueChange={(value) => handleStatusChange(user.id, value)}
                     >
                       <SelectTrigger className="w-32">

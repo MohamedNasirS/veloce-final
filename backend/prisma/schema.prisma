@@ -3,9 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-  directUrl = env("DIRECT_DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
 enum Role {
@@ -13,6 +12,12 @@ enum Role {
   recycler
   aggregator
   admin
+}
+
+enum UserStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 enum BidStatus {
@@ -35,7 +40,7 @@ model User {
   registrationNumber   String?
   taxId                String?
   description          String?
-  isApproved           Boolean          @default(false)
+  status               UserStatus       @default(PENDING)
 
   documents            UserDocument?
 
