@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { io, Socket } from 'socket.io-client';
+import { useAuth } from '../../contexts/AuthContext';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -21,8 +23,11 @@ import {
 
 const AdminUsers = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [users, setUsers] = useState<any[]>([]);
   const [selectedDocs, setSelectedDocs] = useState<any[]>([]);
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
 
   const fetchUsers = async () => {
     try {
@@ -42,6 +47,111 @@ const AdminUsers = () => {
   useEffect(() => {
     fetchUsers();
   }, [toast]);
+
+  // WebSocket connection and real-time updates
+  useEffect(() => {
+    if (!user) return;
+
+    // Connect to WebSocket server
+    const newSocket = io('http://localhost:3001', {
+      transports: ['websocket'],
+    });
+
+    newSocket.on('connect', () => {
+      console.log('Connected to WebSocket server');
+      setIsConnected(true);
+
+      // Authenticate with the WebSocket server
+      newSocket.emit('authenticate', {
+        userId: user.id,
+        userRole: user.role,
+      });
+    });
+
+    newSocket.on('disconnect', () => {
+      console.log('Disconnected from WebSocket server');
+      setIsConnected(false);
+    });
+
+    // Listen for real-time user events
+    newSocket.on('userRegistered', (data) => {
+      console.log('User registered:', data);
+
+      // Add new user to the list if not admin
+      if (data.role !== 'admin') {
+        setUsers(prevUsers => {
+          // Check if user already exists to avoid duplicates
+          const userExists = prevUsers.some(u => u.id === data.id);
+          if (!userExists) {
+            return [data, ...prevUsers];
+          }
+          return prevUsers;
+        });
+
+        toast({
+          title: 'New User Registered',
+          description: `${data.name} from ${data.company} has registered as ${data.role.replace('_', ' ')}.`,
+        });
+      }
+    });
+
+    newSocket.on('userApproved', (data) => {
+      console.log('User approved:', data);
+
+      // Update user status in the list
+      setUsers(prevUsers =>
+        prevUsers.map(u =>
+          u.id === data.id
+            ? { ...u, status: data.status, updatedAt: data.approvedAt }
+            : u
+        )
+      );
+
+      toast({
+        title: 'User Approved',
+        description: `${data.name} has been approved.`,
+      });
+    });
+
+    newSocket.on('userRejected', (data) => {
+      console.log('User rejected:', data);
+
+      // Update user status in the list
+      setUsers(prevUsers =>
+        prevUsers.map(u =>
+          u.id === data.id
+            ? { ...u, status: data.status, updatedAt: data.rejectedAt }
+            : u
+        )
+      );
+
+      toast({
+        title: 'User Rejected',
+        description: `${data.name} has been rejected. Reason: ${data.reason}`,
+        variant: 'destructive',
+      });
+    });
+
+    // Listen for user status changes from admin actions
+    newSocket.on('userStatusChangedAdmin', (data) => {
+      console.log('User status changed (admin view):', data);
+
+      // Update user status in the list
+      setUsers(prevUsers =>
+        prevUsers.map(u =>
+          u.id === data.user.id
+            ? { ...u, status: data.newStatus, updatedAt: new Date().toISOString() }
+            : u
+        )
+      );
+    });
+
+    setSocket(newSocket);
+
+    return () => {
+      newSocket.close();
+    };
+  }, [user, toast]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -71,13 +181,42 @@ const AdminUsers = () => {
 
   const handleStatusChange = async (userId: string, newStatus: string) => {
     try {
-      await axios.patch(`${import.meta.env.VITE_API_URL}/api/admin/users/${userId}/status`, {
-        status: newStatus,
-      });
+      const token = localStorage.getItem('token');
 
-      // Refresh the users data from the server to ensure we have the latest state
-      await fetchUsers();
+      if (newStatus === 'approved') {
+        // Use the new user approval endpoint that emits WebSocket events
+        await axios.post(`${import.meta.env.VITE_API_URL}/api/users/${userId}/approve`, {}, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+      } else if (newStatus === 'rejected') {
+        // Use the new user rejection endpoint that emits WebSocket events
+        await axios.post(`${import.meta.env.VITE_API_URL}/api/users/${userId}/reject`, {
+          reason: 'Status changed by admin'
+        }, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+      } else {
+        // For other status changes, use the old endpoint
+        await axios.patch(`${import.meta.env.VITE_API_URL}/api/admin/users/${userId}/status`, {
+          status: newStatus,
+        }, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
 
+        // Manually refresh for non-WebSocket status changes
+        await fetchUsers();
+      }
+
+      // Note: No need to refresh users list for approve/reject as WebSocket will handle it
       toast({
         title: 'User Status Updated',
         description: `User status has been changed to ${newStatus}.`,
@@ -222,8 +361,21 @@ const AdminUsers = () => {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>User Management</CardTitle>
-          <CardDescription>Manage user registrations, roles, and account status</CardDescription>
+          <div className="flex justify-between items-start">
+            <div>
+              <CardTitle>User Management</CardTitle>
+              <CardDescription>Manage user registrations, roles, and account status</CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <div
+                className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'
+                  }`}
+              />
+              <span className="text-sm text-gray-600">
+                {isConnected ? 'Real-time Connected' : 'Disconnected'}
+              </span>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <Table>

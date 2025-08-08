@@ -314,6 +314,135 @@ export class BidGateway implements OnGatewayInit, OnGatewayConnection, OnGateway
     this.logger.log(`✅ [IMMEDIATE] Bid update broadcasted to all connected users`);
   }
 
+  // 🆕 NEW: Real-time user registration notification to admin users
+  emitNewUserRegistered(user: any) {
+    const newUserEvent = {
+      type: 'NEW_USER_REGISTERED',
+      user: user,
+      message: `New user "${user.name}" from ${user.company} has registered`,
+      timestamp: new Date().toISOString(),
+    };
+
+    this.logger.log(`🚀 [IMMEDIATE] Broadcasting new user registration to admins: ${user.id} - ${user.name} (${user.company})`);
+
+    // Method 1: Emit to admin room (most efficient)
+    this.server.to('admins').emit('newUserRegistered', newUserEvent);
+    this.logger.log(`📡 [IMMEDIATE] Sent to admin room`);
+
+    // Method 2: Fallback - direct socket emission to ensure delivery
+    let adminCount = 0;
+    this.adminSockets.forEach(socketId => {
+      const socket = this.server.sockets.sockets.get(socketId);
+      if (socket && socket.connected) {
+        socket.emit('newUserRegistered', newUserEvent);
+        adminCount++;
+      }
+    });
+
+    this.logger.log(`✅ [IMMEDIATE] New user registration broadcasted to ${adminCount} admin sockets`);
+  }
+
+  // 🆕 NEW: Real-time user status change notification to admin users
+  emitUserStatusChangedToAdmins(user: any, oldStatus: string, newStatus: string) {
+    const userStatusEvent = {
+      type: 'USER_STATUS_CHANGED_ADMIN',
+      user: user,
+      oldStatus: oldStatus,
+      newStatus: newStatus,
+      message: `User "${user.name}" status changed from ${oldStatus} to ${newStatus}`,
+      timestamp: new Date().toISOString(),
+    };
+
+    this.logger.log(`🚀 [IMMEDIATE] Broadcasting user status change to admins: ${user.id} - ${oldStatus} → ${newStatus}`);
+
+    // Method 1: Emit to admin room
+    this.server.to('admins').emit('userStatusChangedAdmin', userStatusEvent);
+    this.logger.log(`📡 [IMMEDIATE] Sent user status change to admin room`);
+
+    // Method 2: Fallback - direct socket emission
+    let adminCount = 0;
+    this.adminSockets.forEach(socketId => {
+      const socket = this.server.sockets.sockets.get(socketId);
+      if (socket && socket.connected) {
+        socket.emit('userStatusChangedAdmin', userStatusEvent);
+        adminCount++;
+      }
+    });
+
+    this.logger.log(`✅ [IMMEDIATE] User status change broadcasted to ${adminCount} admin sockets`);
+  }
+
+  // 🆕 NEW: Real-time user registration notification
+  emitUserRegistered(user: any) {
+    const userRegisteredEvent = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      company: user.company,
+      role: user.role,
+      status: user.status,
+      createdAt: user.createdAt,
+      timestamp: new Date().toISOString(),
+    };
+
+    this.logger.log(`🚀 [IMMEDIATE] Broadcasting user registered event: ${user.id} - ${user.name}`);
+
+    // Emit to all connected clients
+    this.server.emit('userRegistered', userRegisteredEvent);
+    this.logger.log(`✅ [IMMEDIATE] User registered event broadcasted to all clients`);
+  }
+
+  // 🆕 NEW: Real-time user approval notification
+  emitUserApproved(user: any) {
+    const userApprovedEvent = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      company: user.company,
+      role: user.role,
+      status: user.status,
+      approvedBy: user.approvedBy,
+      approvedAt: user.approvedAt,
+      timestamp: new Date().toISOString(),
+    };
+
+    this.logger.log(`🚀 [IMMEDIATE] Broadcasting user approved event: ${user.id} - ${user.name}`);
+
+    // Emit to all connected clients
+    this.server.emit('userApproved', userApprovedEvent);
+
+    // Also emit to the specific user
+    this.emitUserStatusChange(user.id, 'APPROVED');
+
+    this.logger.log(`✅ [IMMEDIATE] User approved event broadcasted to all clients`);
+  }
+
+  // 🆕 NEW: Real-time user rejection notification
+  emitUserRejected(user: any) {
+    const userRejectedEvent = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      company: user.company,
+      role: user.role,
+      status: user.status,
+      rejectedBy: user.rejectedBy,
+      rejectedAt: user.rejectedAt,
+      reason: user.reason,
+      timestamp: new Date().toISOString(),
+    };
+
+    this.logger.log(`🚀 [IMMEDIATE] Broadcasting user rejected event: ${user.id} - ${user.name}`);
+
+    // Emit to all connected clients
+    this.server.emit('userRejected', userRejectedEvent);
+
+    // Also emit to the specific user
+    this.emitUserStatusChange(user.id, 'REJECTED');
+
+    this.logger.log(`✅ [IMMEDIATE] User rejected event broadcasted to all clients`);
+  }
+
   // Helper method to emit events to all admin users (LEGACY - keeping for compatibility)
   private emitToAdminUsers(eventName: string, eventData: any) {
     // Use the new enhanced room-based method

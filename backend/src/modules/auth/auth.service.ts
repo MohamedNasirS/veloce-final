@@ -9,12 +9,14 @@ import * as bcrypt from 'bcrypt';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import { Role, UserStatus } from '@prisma/client';
+import { BidGateway } from '../../gateways/bid.gateway';
 
 @Injectable()
 export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
+    private bidGateway: BidGateway,
   ) { }
 
   async register(userData: any, files: any) {
@@ -86,6 +88,17 @@ export class AuthService {
           authorizedSignatoryPath: signatoryPath ?? undefined,
           companyRegistrationPath: regPath,
         },
+      });
+
+      // Emit user registration event via WebSocket
+      this.bidGateway.emitUserRegistered({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        company: user.company,
+        role: user.role,
+        status: user.status,
+        createdAt: user.createdAt,
       });
 
       return {

@@ -25,6 +25,7 @@ import AdminDashboard from "./pages/dashboards/AdminDashboard";
 import AdminWinnerSelection from "./pages/dashboards/AdminWinnerSelection";
 import AdminUsers from "./pages/dashboards/AdminUsers";
 import AdminBidManagement from "./pages/dashboards/AdminBidManagement";
+import UserRegistrationMonitor from "./components/UserRegistrationMonitor";
 
 // Waste Generator Pages
 import CreateBid from "./pages/dashboards/CreateBid";
@@ -78,6 +79,7 @@ const App = () => (
               <Route path="admin/users" element={<ProtectedRoute allowedRoles={['admin']}><AdminUsers /></ProtectedRoute>} />
               <Route path="admin/bids" element={<ProtectedRoute allowedRoles={['admin']}><AdminBidManagement /></ProtectedRoute>} />
               <Route path="admin/winner-selection" element={<ProtectedRoute allowedRoles={['admin']}><AdminWinnerSelection /></ProtectedRoute>} />
+              <Route path="admin/monitor" element={<ProtectedRoute allowedRoles={['admin']}><UserRegistrationMonitor /></ProtectedRoute>} />
 
               {/* Waste Generator Routes */}
               <Route path="waste_generator" element={<ProtectedRoute allowedRoles={['waste_generator']}><WasteGeneratorDashboard /></ProtectedRoute>} />
@@ -107,36 +109,36 @@ const App = () => (
 
 // Component to redirect to appropriate dashboard based on user role
 const DashboardRedirect = () => {
-    const { user } = useAuth();
-    const navigate = useNavigate();
-  
-    React.useEffect(() => {
-      if (user) {
-        switch (user.role) {
-          case 'waste_generator':
-            navigate('/dashboard/waste_generator', { replace: true });
-            break;
-          case 'recycler':
-            navigate('/dashboard/recycler', { replace: true });
-            break;
-          case 'aggregator':
-            navigate('/dashboard/aggregator', { replace: true });
-            break;
-          case 'admin':
-            navigate('/dashboard/admin', { replace: true });
-            break;
-          default:
-            navigate('/', { replace: true });
-        }
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  React.useEffect(() => {
+    if (user) {
+      switch (user.role) {
+        case 'waste_generator':
+          navigate('/dashboard/waste_generator', { replace: true });
+          break;
+        case 'recycler':
+          navigate('/dashboard/recycler', { replace: true });
+          break;
+        case 'aggregator':
+          navigate('/dashboard/aggregator', { replace: true });
+          break;
+        case 'admin':
+          navigate('/dashboard/admin', { replace: true });
+          break;
+        default:
+          navigate('/', { replace: true });
       }
-    }, [user, navigate]);
-  
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-        <span className="ml-2">Redirecting...</span>
-      </div>
-    );
-  };
+    }
+  }, [user, navigate]);
+
+  return (
+    <div className="flex items-center justify-center p-8">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      <span className="ml-2">Redirecting...</span>
+    </div>
+  );
+};
 
 export default App; 
