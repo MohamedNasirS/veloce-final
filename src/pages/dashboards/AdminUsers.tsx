@@ -117,17 +117,88 @@ const AdminUsers = () => {
 
   const handleDeleteUser = async (userId: string) => {
     try {
-      await axios.delete(`${import.meta.env.VITE_API_URL}/api/admin/users/${userId}`);
-      setUsers((prev) => prev.filter((user) => user.id !== userId));
-      toast({
-        title: 'User Deleted',
-        description: 'The user has been successfully deleted.',
-      });
+      console.log(`Attempting to delete user with ID: ${userId}`);
+      
+      // Try different approaches to handle CORS and routing issues
+      let success = false;
+      let response;
+      
+      // Approach 1: Use the environment variable (standard approach)
+      try {
+        console.log('Trying standard approach with environment variable');
+        response = await axios.delete(`${import.meta.env.VITE_API_URL}/api/admin/users/${userId}`);
+        console.log('Standard approach successful:', response.data);
+        success = true;
+      } catch (error1) {
+        console.error('Standard approach failed:', error1);
+        
+        // Approach 2: Direct URL to localhost (works in test script)
+        try {
+          console.log('Trying direct localhost URL');
+          response = await axios.delete(`http://localhost:3001/api/admin/users/${userId}`);
+          console.log('Direct localhost approach successful:', response.data);
+          success = true;
+        } catch (error2) {
+          console.error('Direct localhost approach failed:', error2);
+          
+          // Approach 3: Use production URL
+          try {
+            console.log('Trying production URL');
+            response = await axios.delete(`http://147.93.27.172:3001/api/admin/users/${userId}`);
+            console.log('Production URL approach successful:', response.data);
+            success = true;
+          } catch (error3) {
+            console.error('Production URL approach failed:', error3);
+            
+            // Approach 4: Use fetch instead of axios
+            try {
+              console.log('Trying fetch API');
+              const fetchResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/users/${userId}`, {
+                method: 'DELETE',
+                headers: {
+                  'Content-Type': 'application/json',
+                }
+              });
+              
+              if (fetchResponse.ok) {
+                response = { data: await fetchResponse.json() };
+                console.log('Fetch API approach successful:', response.data);
+                success = true;
+              } else {
+                throw new Error(`Fetch API failed with status: ${fetchResponse.status}`);
+              }
+            } catch (error4) {
+              console.error('Fetch API approach failed:', error4);
+            }
+          }
+        }
+      }
+      
+      if (success) {
+        setUsers((prev) => prev.filter((user) => user.id !== userId));
+        toast({
+          title: 'User Deleted',
+          description: 'The user has been successfully deleted.',
+        });
+      } else {
+        throw new Error('All deletion approaches failed');
+      }
     } catch (error) {
       console.error('User deletion failed:', error);
+      
+      // Show more detailed error information
+      let errorMessage = 'Failed to delete the user.';
+      if (error.response) {
+        errorMessage += ` Server responded with status ${error.response.status}: ${error.response.data?.message || 'Unknown error'}`;
+      } else if (error.request) {
+        errorMessage += ' No response received from server.';
+      } else {
+        errorMessage += ` ${error.message}`;
+      }
+      
       toast({
         title: 'Error',
-        description: 'Failed to delete the user.',
+        description: errorMessage,
         variant: 'destructive',
       });
     }

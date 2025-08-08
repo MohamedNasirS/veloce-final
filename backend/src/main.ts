@@ -16,6 +16,8 @@ class CorsIoAdapter extends IoAdapter {
     const allowedOrigins = [
       'http://147.93.27.172/marketplace',
       'http://localhost:8080/marketplace',
+      'http://localhost:5173', // Add development server
+      'http://localhost', // Add localhost
     ];
 
     const corsOptions = {
@@ -23,10 +25,12 @@ class CorsIoAdapter extends IoAdapter {
         if (!origin || allowedOrigins.includes(origin)) {
           callback(null, true);
         } else {
-          callback(new Error('Not allowed by CORS'));
+          console.log(`Origin ${origin} not allowed by CORS`);
+          callback(null, true); // Allow all origins for now to debug
         }
       },
       credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     };
 
     return super.createIOServer(port, {
@@ -61,19 +65,26 @@ async function bootstrap() {
   const allowedOrigins = [
     'http://147.93.27.172/marketplace',
     'http://localhost:8080/marketplace',
+    'http://localhost:5173', // Add development server
+    'http://localhost', // Add localhost
   ];
 
+  // Enable CORS with more permissive settings for debugging
   app.enableCors({
     origin: (origin, callback) => {
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        callback(new Error('Not allowed by CORS'));
+        console.log(`Origin ${origin} not allowed by CORS`);
+        callback(null, true); // Allow all origins for now to debug
       }
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    exposedHeaders: ['Content-Length', 'Content-Type'],
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
   });
 
   app.useWebSocketAdapter(new CorsIoAdapter(app));

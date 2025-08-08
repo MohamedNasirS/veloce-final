@@ -61,55 +61,76 @@ export class AdminService {
   }
 
   async deleteUser(userId: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-    });
-
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    // Before deleting the user, we need to handle related records
-    // to avoid foreign key constraint errors.
-
-    // Delete related UserDocument first
-    await this.prisma.userDocument.deleteMany({
-      where: { userId: userId },
-    });
-
-    // Disassociate from bids they won
-    await this.prisma.bid.updateMany({
-        where: { winnerId: userId },
-        data: { winnerId: null },
-    });
+    console.log(`[AdminService] Deleting user with ID: ${userId}`);
     
-    // Delete their participation records
-    await this.prisma.bidParticipant.deleteMany({
-        where: { userId: userId },
-    });
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+      });
 
-    // Delete events they triggered
-     await this.prisma.bidEvent.deleteMany({
-        where: { userId: userId },
-    });
-    
-    // Handle bids they created (e.g., delete them or reassign)
-    // For now, let's delete them. Be careful with this in production.
-    const createdBids = await this.prisma.bid.findMany({
-        where: { creatorId: userId },
-        include: { images: true, participants: true, events: true },
-    });
+      if (!user) {
+        console.log(`[AdminService] User with ID ${userId} not found`);
+        throw new NotFoundException(`User with ID ${userId} not found`);
+      }
 
-    for (const bid of createdBids) {
-        await this.prisma.bidImage.deleteMany({ where: { bidId: bid.id }});
-        await this.prisma.bidParticipant.deleteMany({ where: { bidId: bid.id }});
-        await this.prisma.bidEvent.deleteMany({ where: { bidId: bid.id }});
-        await this.prisma.bid.delete({ where: { id: bid.id }});
+      console.log(`[AdminService] Found user: ${user.name} (${user.email})`);
+
+      // Before deleting the user, we need to handle related records
+      // to avoid foreign key constraint errors.
+
+      // Delete related UserDocument first
+      console.log(`[AdminService] Deleting user documents for user ${userId}`);
+      await this.prisma.userDocument.deleteMany({
+        where: { userId: userId },
+      });
+
+      // Disassociate from bids they won
+      console.log(`[AdminService] Updating bids won by user ${userId}`);
+      await this.prisma.bid.updateMany({
+          where: { winnerId: userId },
+          data: { winnerId: null },
+      });
+      
+      // Delete their participation records
+      console.log(`[AdminService] Deleting bid participation records for user ${userId}`);
+      await this.prisma.bidParticipant.deleteMany({
+          where: { userId: userId },
+      });
+
+      // Delete events they triggered
+      console.log(`[AdminService] Deleting bid events triggered by user ${userId}`);
+      await this.prisma.bidEvent.deleteMany({
+          where: { userId: userId },
+      });
+      
+      // Handle bids they created (e.g., delete them or reassign)
+      // For now, let's delete them. Be careful with this in production.
+      console.log(`[AdminService] Finding bids created by user ${userId}`);
+      const createdBids = await this.prisma.bid.findMany({
+          where: { creatorId: userId },
+          include: { images: true, participants: true, events: true },
+      });
+
+      console.log(`[AdminService] Found ${createdBids.length} bids created by user ${userId}`);
+      for (const bid of createdBids) {
+          console.log(`[AdminService] Deleting related records for bid ${bid.id}`);
+          await this.prisma.bidImage.deleteMany({ where: { bidId: bid.id }});
+          await this.prisma.bidParticipant.deleteMany({ where: { bidId: bid.id }});
+          await this.prisma.bidEvent.deleteMany({ where: { bidId: bid.id }});
+          await this.prisma.bid.delete({ where: { id: bid.id }});
+      }
+
+      // Finally, delete the user
+      console.log(`[AdminService] Deleting user ${userId}`);
+      const result = await this.prisma.user.delete({
+        where: { id: userId },
+      });
+      
+      console.log(`[AdminService] User ${userId} deleted successfully`);
+      return result;
+    } catch (error) {
+      console.error(`[AdminService] Error deleting user ${userId}:`, error);
+      throw error;
     }
-
-    // Finally, delete the user
-    return this.prisma.user.delete({
-      where: { id: userId },
-    });
   }
 }
