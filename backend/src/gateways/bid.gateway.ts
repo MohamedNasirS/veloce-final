@@ -10,13 +10,21 @@ import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 
 // ❌ Removed inline cors, now handled globally via adapter
-@WebSocketGateway()
+@WebSocketGateway({
+  cors: {
+    origin: ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:8080', 'http://147.93.27.172'],
+    credentials: true,
+  },
+})
 export class BidGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server;
   private logger: Logger = new Logger('BidGateway');
 
-  // Track user sessions: userId -> Set of socket IDs
+  // Enhanced session tracking with role-based channels
   private userSessions: Map<string, Set<string>> = new Map();
+  private adminSockets: Set<string> = new Set();
+  private userSockets: Map<string, Set<string>> = new Map(); // userId -> socket IDs
+  private socketToUser: Map<string, { userId: string; userRole: string }> = new Map();
 
   afterInit(server: Server) {
     this.logger.log('WebSocket Gateway Initialized');
@@ -29,6 +37,29 @@ export class BidGateway implements OnGatewayInit, OnGatewayConnection, OnGateway
   handleDisconnect(client: Socket) {
     this.logger.log(`Client disconnected: ${client.id}`);
 
+    // Enhanced cleanup for role-based tracking
+    const userInfo = this.socketToUser.get(client.id);
+    if (userInfo) {
+      const { userId, userRole } = userInfo;
+
+      // Remove from admin sockets if admin
+      if (userRole === 'admin') {
+        this.adminSockets.delete(client.id);
+      }
+
+      // Remove from user sockets
+      const userSocketSet = this.userSockets.get(userId);
+      if (userSocketSet) {
+        userSocketSet.delete(client.id);
+        if (userSocketSet.size === 0) {
+          this.userSockets.delete(userId);
+        }
+      }
+
+      // Remove from socket mapping
+      this.socketToUser.delete(client.id);
+    }
+
     // Remove client from all user sessions
     for (const [userId, socketIds] of this.userSessions.entries()) {
       socketIds.delete(client.id);
@@ -38,20 +69,45 @@ export class BidGateway implements OnGatewayInit, OnGatewayConnection, OnGateway
     }
   }
 
-  // Handle user authentication and session tracking
+  // Enhanced user authentication and session tracking
   @SubscribeMessage('authenticate')
-  handleAuthenticate(client: Socket, payload: { userId: string }) {
-    const { userId } = payload;
-    this.logger.log(`User ${userId} authenticated with socket ${client.id}`);
+  handleAuthenticate(client: Socket, payload: { userId: string; userRole?: string }) {
+    const { userId, userRole } = payload;
+    this.logger.log(`🔐 User ${userId} (${userRole}) authenticated with socket ${client.id}`);
 
-    // Add socket to user's session
+    // Enhanced session tracking
     if (!this.userSessions.has(userId)) {
       this.userSessions.set(userId, new Set());
     }
     this.userSessions.get(userId)!.add(client.id);
 
-    // Store userId in socket data for easy access
+    // Role-based socket tracking
+    if (userRole === 'admin') {
+      this.adminSockets.add(client.id);
+      this.logger.log(`👑 Admin socket added: ${client.id} (Total admin sockets: ${this.adminSockets.size})`);
+    }
+
+    // User-specific socket tracking
+    if (!this.userSockets.has(userId)) {
+      this.userSockets.set(userId, new Set());
+    }
+    this.userSockets.get(userId)!.add(client.id);
+
+    // Socket to user mapping
+    this.socketToUser.set(client.id, { userId, userRole: userRole || 'user' });
+
+    // Store in socket data for easy access
     client.data.userId = userId;
+    client.data.userRole = userRole;
+
+    // Join role-based rooms for efficient broadcasting
+    if (userRole === 'admin') {
+      client.join('admins');
+    }
+    client.join(`user_${userId}`);
+    client.join(userRole || 'users');
+
+    this.logger.log(`✅ Authentication complete for ${userId}. Rooms: [${userRole}, user_${userId}]`);
   }
 
   emitBidUpdate(bid: any) {
@@ -121,6 +177,159 @@ export class BidGateway implements OnGatewayInit, OnGatewayConnection, OnGateway
     if (userSocketIds.size === 0) {
       this.userSessions.delete(userId);
     }
+  }
+
+  // Emit new bid creation to admin users
+  emitNewBidCreated(bid: any) {
+    const newBidEvent = {
+      type: 'NEW_BID_CREATED',
+      bid: bid,
+      message: `New bid "${bid.lotName}" created by ${bid.creator?.company || 'Unknown'}`,
+      timestamp: new Date().toISOString(),
+    };
+
+    this.logger.log(`[IMMEDIATE] Emitting new bid created: ${bid.id} - ${bid.lotName}`);
+
+    // Send to all admin users
+    this.emitToAdminUsers('newBidCreated', newBidEvent);
+  }
+
+  // Emit bid status change to admin users
+  emitBidStatusChanged(bid: any, oldStatus: string, newStatus: string) {
+    const statusChangeEvent = {
+      type: 'BID_STATUS_CHANGED',
+      bid: bid,
+      oldStatus: oldStatus,
+      newStatus: newStatus,
+      message: `Bid "${bid.lotName}" status changed from ${oldStatus} to ${newStatus}`,
+      timestamp: new Date().toISOString(),
+    };
+
+    this.logger.log(`[IMMEDIATE] Emitting bid status change: ${bid.id} - ${oldStatus} → ${newStatus}`);
+
+    // Send to all admin users
+    this.emitToAdminUsers('bidStatusChanged', statusChangeEvent);
+  }
+
+  // 🚀 ENHANCED: Immediate bid creation notification to ALL relevant users
+  emitNewBidCreatedToAll(bid: any) {
+    const newBidEvent = {
+      type: 'NEW_BID_CREATED',
+      bid: bid,
+      message: `New bid "${bid.lotName}" created by ${bid.creator?.company || 'Unknown'}`,
+      timestamp: new Date().toISOString(),
+    };
+
+    this.logger.log(`🚀 [IMMEDIATE] Broadcasting new bid to ALL users: ${bid.id} - ${bid.lotName}`);
+
+    // Method 1: Emit to admin room (most efficient)
+    this.server.to('admins').emit('newBidCreated', newBidEvent);
+    this.logger.log(`📡 [IMMEDIATE] Sent to admin room`);
+
+    // Method 2: Emit to specific bid creator
+    if (bid.creatorId) {
+      this.server.to(`user_${bid.creatorId}`).emit('bidCreated', newBidEvent);
+      this.logger.log(`📡 [IMMEDIATE] Sent to bid creator: ${bid.creatorId}`);
+    }
+
+    // Method 3: Fallback - direct socket emission to ensure delivery
+    let adminCount = 0;
+    this.adminSockets.forEach(socketId => {
+      const socket = this.server.sockets.sockets.get(socketId);
+      if (socket && socket.connected) {
+        socket.emit('newBidCreated', newBidEvent);
+        adminCount++;
+      }
+    });
+
+    this.logger.log(`✅ [IMMEDIATE] New bid broadcasted to ${adminCount} admin sockets + creator`);
+  }
+
+  // 🚀 ENHANCED: Immediate bid status change to ALL relevant users
+  emitBidStatusChangedToAll(bid: any, oldStatus: string, newStatus: string) {
+    const statusChangeEvent = {
+      type: 'BID_STATUS_CHANGED',
+      bid: bid,
+      oldStatus: oldStatus,
+      newStatus: newStatus,
+      message: `Bid "${bid.lotName}" status changed from ${oldStatus} to ${newStatus}`,
+      timestamp: new Date().toISOString(),
+    };
+
+    this.logger.log(`🚀 [IMMEDIATE] Broadcasting status change to ALL users: ${bid.id} - ${oldStatus} → ${newStatus}`);
+
+    // Method 1: Emit to admin room
+    this.server.to('admins').emit('bidStatusChanged', statusChangeEvent);
+    this.logger.log(`📡 [IMMEDIATE] Sent status change to admin room`);
+
+    // Method 2: Emit to bid creator (multiple approaches for reliability)
+    if (bid.creatorId) {
+      // Approach A: Room-based emission
+      this.server.to(`user_${bid.creatorId}`).emit('bidStatusChanged', statusChangeEvent);
+      this.logger.log(`📡 [IMMEDIATE] Sent status change to bid creator room: user_${bid.creatorId}`);
+
+      // Approach B: Direct socket emission to creator
+      const creatorSockets = this.userSockets.get(bid.creatorId);
+      if (creatorSockets) {
+        creatorSockets.forEach(socketId => {
+          const socket = this.server.sockets.sockets.get(socketId);
+          if (socket && socket.connected) {
+            socket.emit('bidStatusChanged', statusChangeEvent);
+            this.logger.log(`📡 [IMMEDIATE] Direct emit to creator socket: ${socketId}`);
+          }
+        });
+      }
+    }
+
+    // Method 3: Emit to all waste generators (they need to see bid approvals)
+    this.server.to('waste_generator').emit('bidStatusChanged', statusChangeEvent);
+    this.logger.log(`📡 [IMMEDIATE] Sent status change to all waste generators`);
+
+    // Method 4: Fallback - direct socket emission
+    let totalNotified = 0;
+    this.adminSockets.forEach(socketId => {
+      const socket = this.server.sockets.sockets.get(socketId);
+      if (socket && socket.connected) {
+        socket.emit('bidStatusChanged', statusChangeEvent);
+        totalNotified++;
+      }
+    });
+
+    this.logger.log(`✅ [IMMEDIATE] Status change broadcasted to ${totalNotified} admin sockets + creator + waste generators`);
+  }
+
+  // 🚀 ENHANCED: Real-time bid updates for live bidding
+  emitBidUpdateToAll(bid: any) {
+    const bidUpdateEvent = {
+      type: 'BID_UPDATED',
+      bid: bid,
+      message: `Bid "${bid.lotName}" has been updated`,
+      timestamp: new Date().toISOString(),
+    };
+
+    this.logger.log(`🚀 [IMMEDIATE] Broadcasting bid update to ALL users: ${bid.id}`);
+
+    // Broadcast to all connected users
+    this.server.emit('bidUpdated', bidUpdateEvent);
+    this.logger.log(`✅ [IMMEDIATE] Bid update broadcasted to all connected users`);
+  }
+
+  // Helper method to emit events to all admin users (LEGACY - keeping for compatibility)
+  private emitToAdminUsers(eventName: string, eventData: any) {
+    // Use the new enhanced room-based method
+    this.server.to('admins').emit(eventName, eventData);
+    this.logger.log(`📡 [LEGACY] Sent ${eventName} to admin room`);
+
+    // Fallback for direct socket emission
+    let adminCount = 0;
+    this.adminSockets.forEach(socketId => {
+      const socket = this.server.sockets.sockets.get(socketId);
+      if (socket && socket.connected) {
+        socket.emit(eventName, eventData);
+        adminCount++;
+      }
+    });
+    this.logger.log(`✅ [LEGACY] Sent ${eventName} to ${adminCount} admin sockets`);
   }
 
   // Get active user sessions for debugging

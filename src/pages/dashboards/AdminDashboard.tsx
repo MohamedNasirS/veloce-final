@@ -3,14 +3,18 @@ import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
+import { useAuth } from '../../contexts/AuthContext';
+import { useWebSocket } from '../../hooks/useWebSocket';
 import axios from 'axios';
 
 const AdminDashboard = () => {
+  const { user } = useAuth();
   const [bids, setBids] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [pendingBids, setPendingBids] = useState<any[]>([]);
   const [closedBids, setClosedBids] = useState<any[]>([]);
 
+  // Fetch initial dashboard data
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
@@ -30,6 +34,77 @@ const AdminDashboard = () => {
 
     fetchDashboardData();
   }, []);
+
+  // 🚀 ENHANCED WebSocket connection using custom hook
+  const { isConnected } = useWebSocket({
+    autoConnect: user?.role === 'admin',
+    onNewBidCreated: (event) => {
+      console.log('[AdminDashboard] 🆕 IMMEDIATE: New bid created received:', event);
+
+      const newBid = event.bid;
+
+      // Update all bids list
+      setBids(prev => {
+        const existingBid = prev.find(bid => bid.id === newBid.id);
+        if (existingBid) return prev;
+        return [newBid, ...prev];
+      });
+
+      // If the new bid is pending, add it to pending bids
+      if (newBid.status === 'PENDING') {
+        setPendingBids(prev => {
+          const existingBid = prev.find(bid => bid.id === newBid.id);
+          if (existingBid) return prev;
+          return [newBid, ...prev];
+        });
+      }
+
+      console.log('[AdminDashboard] Dashboard statistics updated with new bid');
+    },
+    onBidStatusChanged: (event) => {
+      console.log('[AdminDashboard] 📋 IMMEDIATE: Bid status changed received:', event);
+
+      const { bid, oldStatus, newStatus } = event;
+
+      // Update all bids list
+      setBids(prev => prev.map(b =>
+        b.id === bid.id ? { ...b, status: newStatus } : b
+      ));
+
+      // Update pending bids based on status change
+      if (oldStatus === 'PENDING' && newStatus !== 'PENDING') {
+        // Remove from pending bids
+        setPendingBids(prev => prev.filter(b => b.id !== bid.id));
+      } else if (oldStatus !== 'PENDING' && newStatus === 'PENDING') {
+        // Add to pending bids
+        setPendingBids(prev => {
+          const existingBid = prev.find(b => b.id === bid.id);
+          if (existingBid) return prev;
+          return [bid, ...prev];
+        });
+      }
+
+      // Update closed bids for winner selection
+      if (newStatus === 'CLOSED' && !bid.winnerId) {
+        setClosedBids(prev => {
+          const existingBid = prev.find(b => b.id === bid.id);
+          if (existingBid) return prev;
+          return [bid, ...prev];
+        });
+      } else if (oldStatus === 'CLOSED' && newStatus !== 'CLOSED') {
+        setClosedBids(prev => prev.filter(b => b.id !== bid.id));
+      }
+
+      console.log('[AdminDashboard] Dashboard statistics updated with status change');
+    },
+    onBidUpdated: (event) => {
+      console.log('[AdminDashboard] 🔄 IMMEDIATE: Bid updated received:', event);
+
+      setBids(prev => prev.map(b =>
+        b.id === event.bid.id ? { ...b, ...event.bid } : b
+      ));
+    }
+  });
 
   const totalUsers = users.length;
   const totalBids = bids.length;

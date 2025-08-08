@@ -180,9 +180,9 @@ const DashboardLayout = () => {
     socket.on('connect', () => {
       console.log('Socket connected:', socket.id);
       if (user?.id) {
-        console.log('Authenticating user immediately:', user.id);
-        socket.emit('authenticate', { userId: user.id });
-        console.log('User authenticated with WebSocket:', user.id);
+        console.log('Authenticating user immediately:', user.id, user.role);
+        socket.emit('authenticate', { userId: user.id, userRole: user.role });
+        console.log('User authenticated with WebSocket:', user.id, user.role);
       }
     });
 

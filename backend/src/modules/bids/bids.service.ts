@@ -5,14 +5,14 @@ import { BidHistory } from './types';
 import { BidEventType } from '@prisma/client'; // ✅ Import the enum properly
 import * as fs from 'fs';
 import * as path from 'path';
-import { BidGateway } from '../../gateways/bid.gateway'; 
+import { BidGateway } from '../../gateways/bid.gateway';
 
 @Injectable()
 export class BidsService {
   constructor(
     private prisma: PrismaService,
     private bidGateway: BidGateway
-  ) {}
+  ) { }
 
   async createBid(images: Express.Multer.File[], dto: CreateBidDto) {
     const bid = await this.prisma.bid.create({
@@ -50,118 +50,171 @@ export class BidsService {
       },
     });
 
+    // Get the full bid with creator and images for WebSocket emission
+    const fullBid = await this.prisma.bid.findUnique({
+      where: { id: bid.id },
+      include: {
+        creator: {
+          select: { id: true, name: true, company: true, email: true }
+        },
+        images: true,
+      },
+    });
+
+    // 🚀 ENHANCED: Emit real-time event to ALL relevant users for immediate display
+    console.log(`[BidsService] 🚀 IMMEDIATE: New bid created - ${bid.id} by ${fullBid?.creator?.company}`);
+    this.bidGateway.emitNewBidCreatedToAll(fullBid);
+
     return { message: 'Bid created and pending admin approval', bid };
   }
 
   async approveBid(bidId: string) {
-    const bid = await this.prisma.bid.findUnique({ where: { id: bidId } });
+    const bid = await this.prisma.bid.findUnique({
+      where: { id: bidId },
+      include: {
+        creator: {
+          select: { id: true, name: true, company: true, email: true }
+        },
+        images: true,
+      },
+    });
     if (!bid) throw new NotFoundException('Bid not found');
 
-    await this.prisma.bid.update({
+    const oldStatus = bid.status;
+    const updatedBid = await this.prisma.bid.update({
       where: { id: bidId },
       data: { status: 'APPROVED' },
+      include: {
+        creator: {
+          select: { id: true, name: true, company: true, email: true }
+        },
+        images: true,
+      },
     });
+
+    // 🚀 ENHANCED: Emit real-time status change to ALL relevant users
+    console.log(`[BidsService] 🚀 IMMEDIATE: Bid approved - ${bidId} (${oldStatus} → APPROVED)`);
+    this.bidGateway.emitBidStatusChangedToAll(updatedBid, oldStatus, 'APPROVED');
 
     return { message: 'Bid approved successfully' };
   }
 
   async cancelBid(bidId: string) {
-    const bid = await this.prisma.bid.findUnique({ where: { id: bidId } });
+    const bid = await this.prisma.bid.findUnique({
+      where: { id: bidId },
+      include: {
+        creator: {
+          select: { id: true, name: true, company: true, email: true }
+        },
+        images: true,
+      },
+    });
     if (!bid) throw new NotFoundException('Bid not found');
 
-    await this.prisma.bid.update({
+    const oldStatus = bid.status;
+    const updatedBid = await this.prisma.bid.update({
       where: { id: bidId },
       data: { status: 'CANCELLED' },
+      include: {
+        creator: {
+          select: { id: true, name: true, company: true, email: true }
+        },
+        images: true,
+      },
     });
+
+    // 🚀 ENHANCED: Emit real-time status change to ALL relevant users
+    console.log(`[BidsService] 🚀 IMMEDIATE: Bid cancelled - ${bidId} (${oldStatus} → CANCELLED)`);
+    this.bidGateway.emitBidStatusChangedToAll(updatedBid, oldStatus, 'CANCELLED');
 
     return { message: 'Bid cancelled successfully' };
   }
 
-async placeBid(bidId: string, userId: string, amount: number) {
-  console.log('Received bid attempt:', { bidId, userId, amount });
+  async placeBid(bidId: string, userId: string, amount: number) {
+    console.log('Received bid attempt:', { bidId, userId, amount });
 
-  if (!userId) throw new BadRequestException('User ID is required.');
+    if (!userId) throw new BadRequestException('User ID is required.');
 
-  const bid = await this.prisma.bid.findUnique({ where: { id: bidId } });
-  if (!bid) throw new NotFoundException('Bid not found');
+    const bid = await this.prisma.bid.findUnique({ where: { id: bidId } });
+    if (!bid) throw new NotFoundException('Bid not found');
 
-  if (bid.status !== 'LIVE') {
-    throw new BadRequestException('This bid is not currently open for bidding.');
-  }
+    if (bid.status !== 'LIVE') {
+      throw new BadRequestException('This bid is not currently open for bidding.');
+    }
 
-  if (!amount || isNaN(amount) || amount <= 0) {
-    throw new BadRequestException('Bid amount must be a positive number.');
-  }
+    if (!amount || isNaN(amount) || amount <= 0) {
+      throw new BadRequestException('Bid amount must be a positive number.');
+    }
 
-  const minIncrement = bid.minIncrementPercent ?? 0;
-  const requiredMinAmount = bid.currentPrice + bid.currentPrice * (minIncrement / 100);
+    const minIncrement = bid.minIncrementPercent ?? 0;
+    const requiredMinAmount = bid.currentPrice + bid.currentPrice * (minIncrement / 100);
 
-  if (amount < requiredMinAmount) {
-    throw new BadRequestException(
-      `Your bid must be at least ₹${requiredMinAmount.toFixed(2)} (current price + ${minIncrement}% increment).`
-    );
-  }
-
-  const user = await this.prisma.user.findUnique({ where: { id: userId } });
-  if (!user) throw new NotFoundException('User not found');
-
-  let existing = await this.prisma.bidParticipant.findFirst({ where: { bidId, userId } });
-
-  if (existing) {
-    if (amount <= existing.amount) {
+    if (amount < requiredMinAmount) {
       throw new BadRequestException(
-        `New bid amount must be higher than your previous bid of ₹${existing.amount}.`
+        `Your bid must be at least ₹${requiredMinAmount.toFixed(2)} (current price + ${minIncrement}% increment).`
       );
     }
 
-    await this.prisma.bidParticipant.updateMany({
-      where: { bidId, userId },
-      data: { amount },
-    });
-  } else {
-    existing = await this.prisma.bidParticipant.create({
-      data: { bidId, userId, amount },
-    });
-  }
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found');
 
-  await this.prisma.bidEvent.create({
-    data: {
-      bidId,
-      userId,
-      amount,
-      type: BidEventType.BID_PLACED,
-    },
-  });
+    let existing = await this.prisma.bidParticipant.findFirst({ where: { bidId, userId } });
 
-  await this.prisma.bid.update({
-    where: { id: bidId },
-    data: { currentPrice: amount },
-  });
+    if (existing) {
+      if (amount <= existing.amount) {
+        throw new BadRequestException(
+          `New bid amount must be higher than your previous bid of ₹${existing.amount}.`
+        );
+      }
 
-  // ✅ Emit real-time update via WebSocket
-  const updatedBid = await this.prisma.bid.findUnique({
-    where: { id: bidId },
-    include: {
-      participants: {
-        include: {
-          user: { select: { id: true, name: true, company: true } },
-        },
+      await this.prisma.bidParticipant.updateMany({
+        where: { bidId, userId },
+        data: { amount },
+      });
+    } else {
+      existing = await this.prisma.bidParticipant.create({
+        data: { bidId, userId, amount },
+      });
+    }
+
+    await this.prisma.bidEvent.create({
+      data: {
+        bidId,
+        userId,
+        amount,
+        type: BidEventType.BID_PLACED,
       },
-      creator: { select: { id: true, name: true, company: true } },
-    },
-  });
+    });
 
-  // Prevent silent failure
-  try {
-    this.bidGateway?.emitBidUpdate?.(updatedBid);
-  } catch (error) {
-    console.error('Failed to emit bid update via WebSocket:', error.message);
+    await this.prisma.bid.update({
+      where: { id: bidId },
+      data: { currentPrice: amount },
+    });
+
+    // ✅ Emit real-time update via WebSocket
+    const updatedBid = await this.prisma.bid.findUnique({
+      where: { id: bidId },
+      include: {
+        participants: {
+          include: {
+            user: { select: { id: true, name: true, company: true } },
+          },
+        },
+        creator: { select: { id: true, name: true, company: true } },
+      },
+    });
+
+    // Prevent silent failure
+    try {
+      this.bidGateway?.emitBidUpdate?.(updatedBid);
+    } catch (error) {
+      console.error('Failed to emit bid update via WebSocket:', error.message);
+    }
+
+    return {
+      message: existing ? 'Bid updated successfully' : 'Bid placed successfully',
+    };
   }
-
-  return {
-    message: existing ? 'Bid updated successfully' : 'Bid placed successfully',
-  };
-}
 
 
   async getApprovedBids() {
@@ -205,41 +258,41 @@ async placeBid(bidId: string, userId: string, amount: number) {
   }
 
   async getBidById(bidId: string) {
-  const bid = await this.prisma.bid.findUnique({
-    where: { id: bidId },
-    include: {
-      images: true,
-      creator: { select: { id: true, name: true, company: true } },
-      participants: {
-        include: {
-          user: { select: { id: true, name: true, company: true } },
+    const bid = await this.prisma.bid.findUnique({
+      where: { id: bidId },
+      include: {
+        images: true,
+        creator: { select: { id: true, name: true, company: true } },
+        participants: {
+          include: {
+            user: { select: { id: true, name: true, company: true } },
+          },
+          orderBy: { amount: 'desc' },
         },
-        orderBy: { amount: 'desc' },
-      },
-      winner: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          company: true,
+        winner: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            company: true,
+          },
         },
       },
-    },
-  });
+    });
 
-  if (!bid) throw new NotFoundException('Bid not found');
+    if (!bid) throw new NotFoundException('Bid not found');
 
-  // ⬇️ Find the bid amount placed by the winner
-  const winnerParticipant = bid.participants.find(
-    (p) => p.userId === bid.winnerId
-  );
+    // ⬇️ Find the bid amount placed by the winner
+    const winnerParticipant = bid.participants.find(
+      (p) => p.userId === bid.winnerId
+    );
 
-  // ⬇️ Attach winnerAmount manually to result
-  return {
-    ...bid,
-    winnerAmount: winnerParticipant?.amount ?? 0,
-  };
-}
+    // ⬇️ Attach winnerAmount manually to result
+    return {
+      ...bid,
+      winnerAmount: winnerParticipant?.amount ?? 0,
+    };
+  }
 
 
   async getAllBids() {
@@ -253,34 +306,34 @@ async placeBid(bidId: string, userId: string, amount: number) {
       orderBy: { createdAt: 'desc' },
     });
   }
-async getBiddingHistory(bidId: string): Promise<BidHistory> {
-  const events = await this.prisma.bidEvent.findMany({
-    where: { bidId },
-    orderBy: { createdAt: 'asc' },
-    include: {
-      user: { select: { id: true, name: true } },
-    },
-  });
+  async getBiddingHistory(bidId: string): Promise<BidHistory> {
+    const events = await this.prisma.bidEvent.findMany({
+      where: { bidId },
+      orderBy: { createdAt: 'asc' },
+      include: {
+        user: { select: { id: true, name: true } },
+      },
+    });
 
-  const bids = events
-    .filter(event => event.type === BidEventType.BID_PLACED || event.type === BidEventType.BASE_PRICE)
-    .map(event => ({
-      userId: event.userId,
-      userName:
-        event.user?.name ??
-        (event.type === BidEventType.BASE_PRICE ? 'System' : 'Unknown'), // ✅ fallback label
-      amount: event.amount,
-      timestamp: event.createdAt.toISOString(),
-    }));
+    const bids = events
+      .filter(event => event.type === BidEventType.BID_PLACED || event.type === BidEventType.BASE_PRICE)
+      .map(event => ({
+        userId: event.userId,
+        userName:
+          event.user?.name ??
+          (event.type === BidEventType.BASE_PRICE ? 'System' : 'Unknown'), // ✅ fallback label
+        amount: event.amount,
+        timestamp: event.createdAt.toISOString(),
+      }));
 
-  const winnerEvent = events.find(event => event.type === BidEventType.WINNER_SELECTED);
+    const winnerEvent = events.find(event => event.type === BidEventType.WINNER_SELECTED);
 
-  return {
-    bidId,
-    bids,
-    winnerId: winnerEvent?.userId ?? null,
-  };
-}
+    return {
+      bidId,
+      bids,
+      winnerId: winnerEvent?.userId ?? null,
+    };
+  }
 
 
   async selectWinner(bidId: string, winnerId: string) {
@@ -303,119 +356,119 @@ async getBiddingHistory(bidId: string): Promise<BidHistory> {
       data: { winnerId },
     });
   }
-async refreshBidStatuses() {
-  const now = new Date();
-  const goingLive = await this.prisma.bid.findMany({
-    where: { status: 'APPROVED', startDate: { lte: now } },
-  });
-
-  await this.prisma.bid.updateMany({
-    where: { id: { in: goingLive.map(b => b.id) } },
-    data: { status: 'LIVE' },
-  });
-
-  for (const bid of goingLive) {
-    const fullBid = await this.prisma.bid.findUnique({
-      where: { id: bid.id },
-      include: {
-        participants: true,
-        creator: { select: { id: true, name: true, company: true } },
-      },
+  async refreshBidStatuses() {
+    const now = new Date();
+    const goingLive = await this.prisma.bid.findMany({
+      where: { status: 'APPROVED', startDate: { lte: now } },
     });
-    this.bidGateway.emitBidUpdate(fullBid);
-  }
 
-  const goingClosed = await this.prisma.bid.findMany({
-    where: { status: 'LIVE', endDate: { lte: now } },
-  });
-
-  await this.prisma.bid.updateMany({
-    where: { id: { in: goingClosed.map(b => b.id) } },
-    data: { status: 'CLOSED' },
-  });
-
-  for (const bid of goingClosed) {
-    const fullBid = await this.prisma.bid.findUnique({
-      where: { id: bid.id },
-      include: {
-        participants: true,
-        creator: { select: { id: true, name: true, company: true } },
-      },
+    await this.prisma.bid.updateMany({
+      where: { id: { in: goingLive.map(b => b.id) } },
+      data: { status: 'LIVE' },
     });
-    this.bidGateway.emitBidUpdate(fullBid);
-  }
 
-  return {
-    updatedToLive: goingLive.length,
-    updatedToClosed: goingClosed.length,
-    message: 'Manual refresh completed',
-  };
-}
-
-// ✅ Upload Gate Pass
-
-async uploadGatePass(bidId: string, userId: string, filePath: string) {
-  // Step 1: Get the bid
-  const bid = await this.prisma.bid.findUnique({
-    where: { id: bidId },
-    select: {
-      id: true,
-      status: true,
-      creatorId: true,
-      winnerId: true,
-      gatePassPath: true,
-    },
-  });
-
-  // Step 2: Validation checks
-  if (!bid) {
-    throw new NotFoundException('Bid not found');
-  }
-
-  if (bid.creatorId !== userId) {
-    throw new ForbiddenException('You are not the bid owner');
-  }
-
-  if (bid.status !== 'CLOSED') {
-    throw new BadRequestException('Gate pass upload only allowed for closed bids');
-  }
-
-  if (!bid.winnerId) {
-    throw new BadRequestException('No winner selected for this bid');
-  }
-
-  // Step 3: Delete the old gate pass file if it exists
-  if (bid.gatePassPath) {
-    const absoluteOldPath = path.join(process.cwd(), bid.gatePassPath);
-    console.log('Deleting old gate pass:', absoluteOldPath);
-
-    try {
-      if (fs.existsSync(absoluteOldPath)) {
-        fs.unlinkSync(absoluteOldPath);
-        console.log('Old gate pass deleted successfully.');
-      } else {
-        console.warn('Old gate pass not found at:', absoluteOldPath);
-      }
-    } catch (error) {
-      console.error('Error deleting old gate pass:', error.message);
-      // You may optionally throw or log the error here depending on how critical deletion is
+    for (const bid of goingLive) {
+      const fullBid = await this.prisma.bid.findUnique({
+        where: { id: bid.id },
+        include: {
+          participants: true,
+          creator: { select: { id: true, name: true, company: true } },
+        },
+      });
+      this.bidGateway.emitBidUpdate(fullBid);
     }
+
+    const goingClosed = await this.prisma.bid.findMany({
+      where: { status: 'LIVE', endDate: { lte: now } },
+    });
+
+    await this.prisma.bid.updateMany({
+      where: { id: { in: goingClosed.map(b => b.id) } },
+      data: { status: 'CLOSED' },
+    });
+
+    for (const bid of goingClosed) {
+      const fullBid = await this.prisma.bid.findUnique({
+        where: { id: bid.id },
+        include: {
+          participants: true,
+          creator: { select: { id: true, name: true, company: true } },
+        },
+      });
+      this.bidGateway.emitBidUpdate(fullBid);
+    }
+
+    return {
+      updatedToLive: goingLive.length,
+      updatedToClosed: goingClosed.length,
+      message: 'Manual refresh completed',
+    };
   }
 
-  // Step 4: Update the new gate pass path in DB
-  const updated = await this.prisma.bid.update({
-    where: { id: bidId },
-    data: {
-      gatePassPath: filePath, // must be relative like 'uploads/gatepass/file.pdf'
-    },
-  });
+  // ✅ Upload Gate Pass
 
-  // Step 5: Return success response
-  return {
-    message: 'Gate pass uploaded successfully',
-    gatePassPath: updated.gatePassPath,
-  };
-}
+  async uploadGatePass(bidId: string, userId: string, filePath: string) {
+    // Step 1: Get the bid
+    const bid = await this.prisma.bid.findUnique({
+      where: { id: bidId },
+      select: {
+        id: true,
+        status: true,
+        creatorId: true,
+        winnerId: true,
+        gatePassPath: true,
+      },
+    });
+
+    // Step 2: Validation checks
+    if (!bid) {
+      throw new NotFoundException('Bid not found');
+    }
+
+    if (bid.creatorId !== userId) {
+      throw new ForbiddenException('You are not the bid owner');
+    }
+
+    if (bid.status !== 'CLOSED') {
+      throw new BadRequestException('Gate pass upload only allowed for closed bids');
+    }
+
+    if (!bid.winnerId) {
+      throw new BadRequestException('No winner selected for this bid');
+    }
+
+    // Step 3: Delete the old gate pass file if it exists
+    if (bid.gatePassPath) {
+      const absoluteOldPath = path.join(process.cwd(), bid.gatePassPath);
+      console.log('Deleting old gate pass:', absoluteOldPath);
+
+      try {
+        if (fs.existsSync(absoluteOldPath)) {
+          fs.unlinkSync(absoluteOldPath);
+          console.log('Old gate pass deleted successfully.');
+        } else {
+          console.warn('Old gate pass not found at:', absoluteOldPath);
+        }
+      } catch (error) {
+        console.error('Error deleting old gate pass:', error.message);
+        // You may optionally throw or log the error here depending on how critical deletion is
+      }
+    }
+
+    // Step 4: Update the new gate pass path in DB
+    const updated = await this.prisma.bid.update({
+      where: { id: bidId },
+      data: {
+        gatePassPath: filePath, // must be relative like 'uploads/gatepass/file.pdf'
+      },
+    });
+
+    // Step 5: Return success response
+    return {
+      message: 'Gate pass uploaded successfully',
+      gatePassPath: updated.gatePassPath,
+    };
+  }
   // ✅ Get Gate Pass (for winner or bid owner)
   async getGatePass(bidId: string, userId: string) {
     const bid = await this.prisma.bid.findUnique({

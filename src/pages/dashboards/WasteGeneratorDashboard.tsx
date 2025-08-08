@@ -4,6 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { useAuth } from '../../contexts/AuthContext';
+import { useWebSocket } from '../../hooks/useWebSocket';
+import { useToast } from '../../hooks/use-toast';
 import axios from 'axios';
 
 interface BidParticipant {
@@ -98,9 +100,68 @@ const BiddingHistory: React.FC<{ bidId: string }> = ({ bidId }) => {
 
 const WasteGeneratorDashboard: React.FC = () => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [bids, setBids] = useState<WasteBid[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedBidId, setSelectedBidId] = useState<string | null>(null);
+
+  // 🚀 ENHANCED WebSocket connection for real-time bid updates
+  const { isConnected } = useWebSocket({
+    autoConnect: user?.role === 'waste_generator',
+    onBidStatusChanged: (event) => {
+      console.log('[WasteGeneratorDashboard] 📋 IMMEDIATE: Bid status changed received:', event);
+
+      // Only update if it's the current user's bid
+      if (event.bid.creatorId === user?.id) {
+        setBids(prev => prev.map(bid =>
+          bid.id === event.bid.id
+            ? { ...bid, status: event.newStatus }
+            : bid
+        ));
+
+        // Show toast notification for status change
+        const statusEmoji = event.newStatus === 'APPROVED' ? '✅' :
+          event.newStatus === 'REJECTED' ? '❌' :
+            event.newStatus === 'LIVE' ? '🔴' : '📋';
+
+        toast({
+          title: `${statusEmoji} Bid ${event.newStatus}`,
+          description: `Your bid "${event.bid.lotName}" has been ${event.newStatus.toLowerCase()}`,
+          duration: 5000,
+        });
+
+        console.log('[WasteGeneratorDashboard] Updated bid status for user bid');
+      }
+    },
+    onBidCreated: (event) => {
+      console.log('[WasteGeneratorDashboard] ✨ IMMEDIATE: Bid created confirmation received:', event);
+
+      // Add the newly created bid to the list if it's the current user's bid
+      if (event.bid.creatorId === user?.id) {
+        setBids(prev => {
+          const existingBid = prev.find(bid => bid.id === event.bid.id);
+          if (existingBid) return prev;
+          return [event.bid, ...prev];
+        });
+
+        toast({
+          title: '🎉 Bid Created Successfully!',
+          description: `Your bid "${event.bid.lotName}" has been submitted for admin approval`,
+          duration: 5000,
+        });
+      }
+    },
+    onBidUpdated: (event) => {
+      console.log('[WasteGeneratorDashboard] 🔄 IMMEDIATE: Bid updated received:', event);
+
+      // Update bid if it belongs to current user
+      if (event.bid.creatorId === user?.id) {
+        setBids(prev => prev.map(bid =>
+          bid.id === event.bid.id ? { ...bid, ...event.bid } : bid
+        ));
+      }
+    }
+  });
 
   useEffect(() => {
     if (user?.id) {
@@ -162,6 +223,17 @@ const WasteGeneratorDashboard: React.FC = () => {
 
   return (
     <div className="space-y-4">
+      {/* WebSocket Status Indicator */}
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-2xl font-bold">Waste Generator Dashboard</h1>
+        <div className="flex items-center gap-2">
+          <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+          <span className="text-sm text-gray-600">
+            {isConnected ? '🟢 Live Updates' : '🔴 Disconnected'}
+          </span>
+        </div>
+      </div>
+
       {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
@@ -241,7 +313,7 @@ const WasteGeneratorDashboard: React.FC = () => {
                   {bid.status === 'CLOSED' && (
                     <Link to={`/dashboard/waste_generator/select-winner/${bid.id}`}>
                       <Button variant="outline" size="sm">
-                         Select Winner
+                        Select Winner
                       </Button>
                     </Link>
                   )}

@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { useAuth } from '../../contexts/AuthContext';
+import { useWebSocket } from '../../hooks/useWebSocket';
 import {
   Card, CardContent, CardDescription, CardHeader, CardTitle,
 } from '../../components/ui/card';
@@ -12,37 +14,98 @@ import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger,
 } from '../../components/ui/dialog';
 import { useToast } from '../../hooks/use-toast';
-import { Eye, Check, Clock, X } from 'lucide-react';
+import { Eye, Check, Clock, X, Plus } from 'lucide-react';
 
 const statusOptions = ['ALL', 'PENDING', 'APPROVED', 'LIVE', 'CLOSED', 'CANCELLED'];
 
 const AdminBidManagement = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [bids, setBids] = useState<any[]>([]);
   const [filter, setFilter] = useState('ALL');
 
+  // Fetch initial bids
   useEffect(() => {
     axios.get(`${import.meta.env.VITE_API_URL}/api/bids`)
       .then(res => setBids(res.data))
       .catch(err => console.error('Failed to load all bids', err));
   }, []);
 
+  // 🚀 ENHANCED WebSocket connection using custom hook
+  const { isConnected, connectionError } = useWebSocket({
+    autoConnect: user?.role === 'admin',
+    onNewBidCreated: (event) => {
+      console.log('[AdminBidManagement] 🆕 IMMEDIATE: New bid created received:', event);
+
+      setBids(prev => {
+        // Check if bid already exists to avoid duplicates
+        const existingBid = prev.find(bid => bid.id === event.bid.id);
+        if (existingBid) {
+          console.log('[AdminBidManagement] Bid already exists, skipping duplicate');
+          return prev;
+        }
+
+        console.log('[AdminBidManagement] Adding new bid to list:', event.bid.lotName);
+        // Add new bid to the beginning of the list
+        return [event.bid, ...prev];
+      });
+
+      // Show toast notification with new bid icon
+      toast({
+        title: '🆕 New Bid Created!',
+        description: `"${event.bid.lotName}" by ${event.bid.creator?.company}`,
+      });
+    },
+    onBidStatusChanged: (event) => {
+      console.log('[AdminBidManagement] 📋 IMMEDIATE: Bid status changed received:', event);
+      console.log('[AdminBidManagement] Updating bid:', event.bid.id, 'from', event.oldStatus, 'to', event.newStatus);
+
+      setBids(prev => {
+        const updatedBids = prev.map(bid =>
+          bid.id === event.bid.id
+            ? { ...bid, status: event.newStatus }
+            : bid
+        );
+
+        console.log('[AdminBidManagement] Bid list updated');
+        return updatedBids;
+      });
+
+      // Show toast notification for status change
+      toast({
+        title: `📋 Bid ${event.newStatus}`,
+        description: `"${event.bid.lotName}" status changed to ${event.newStatus}`,
+      });
+    },
+    onBidUpdated: (event) => {
+      console.log('[AdminBidManagement] 🔄 IMMEDIATE: Bid updated received:', event);
+
+      setBids(prev => prev.map(bid =>
+        bid.id === event.bid.id ? { ...bid, ...event.bid } : bid
+      ));
+    }
+  });
+
   const handleApprove = async (bidId: string) => {
     try {
+      console.log('[AdminBidManagement] Approving bid:', bidId);
       await axios.patch(`${import.meta.env.VITE_API_URL}/api/bids/${bidId}/approve`);
-      setBids(prev => prev.map(bid => bid.id === bidId ? { ...bid, status: 'APPROVED' } : bid));
-      toast({ title: '✅ Bid Approved' });
-    } catch {
+      // ✅ Don't update local state - WebSocket will handle the real-time update
+      console.log('[AdminBidManagement] Bid approval request sent, waiting for WebSocket update');
+    } catch (error) {
+      console.error('[AdminBidManagement] Approval failed:', error);
       toast({ title: 'Approval failed', variant: 'destructive' });
     }
   };
 
   const handleCancel = async (bidId: string) => {
     try {
+      console.log('[AdminBidManagement] Cancelling bid:', bidId);
       await axios.patch(`${import.meta.env.VITE_API_URL}/api/bids/${bidId}/cancel`);
-      setBids(prev => prev.map(bid => bid.id === bidId ? { ...bid, status: 'CANCELLED' } : bid));
-      toast({ title: '❌ Bid Cancelled', variant: 'destructive' });
-    } catch {
+      // ✅ Don't update local state - WebSocket will handle the real-time update
+      console.log('[AdminBidManagement] Bid cancellation request sent, waiting for WebSocket update');
+    } catch (error) {
+      console.error('[AdminBidManagement] Cancellation failed:', error);
       toast({ title: 'Cancellation failed', variant: 'destructive' });
     }
   };
@@ -64,8 +127,19 @@ const AdminBidManagement = () => {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Bid Management</CardTitle>
-          <CardDescription>Filter and manage bids based on their status</CardDescription>
+          <CardTitle className="flex items-center justify-between">
+            Bid Management
+            <div className="flex items-center gap-2">
+              <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+              <span className="text-sm text-gray-600">
+                {isConnected ? '🟢 Live Updates' : '🔴 Disconnected'}
+              </span>
+              {connectionError && (
+                <span className="text-xs text-red-600">({connectionError})</span>
+              )}
+            </div>
+          </CardTitle>
+          <CardDescription>Filter and manage bids based on their status - Real-time updates enabled</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex gap-2 mb-4">
