@@ -38,6 +38,34 @@ const DashboardLayout = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
+  // Periodic user status check
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const checkUserStatus = async () => {
+      try {
+        const response = await api.get(`/api/admin/users`);
+        const users = response.data;
+        const currentUser = users.find((u: any) => u.id === user.id);
+
+        if (currentUser && currentUser.status !== 'APPROVED') {
+          console.log(`User status check: User ${user.id} status is ${currentUser.status}, logging out`);
+          alert(`Your account status has been changed to ${currentUser.status.toLowerCase()}. You will be logged out.`);
+          handleLogout();
+        }
+      } catch (error) {
+        console.error('Failed to check user status:', error);
+      }
+    };
+
+    // Only as fallback - check every 2 minutes (WebSocket should handle immediate updates)
+    const statusCheckInterval = setInterval(checkUserStatus, 120000);
+
+    return () => {
+      clearInterval(statusCheckInterval);
+    };
+  }, [user?.id]);
+
   useEffect(() => {
     const saved = Cookies.get('notifications');
     if (saved) {
@@ -59,17 +87,15 @@ const DashboardLayout = () => {
     //     Cookies.set('notifications', JSON.stringify(fetched), { expires: 1 / 24 });
     //   })
     //   .catch(err => console.error('Failed to fetch notifications', err));
-    
+
     const socket: Socket = io(import.meta.env.VITE_API_URL, {
       transports: ['websocket'], // force only websocket
       withCredentials: true,
-      autoConnect: false,
+      autoConnect: true, // Connect immediately
+      forceNew: true, // Force new connection to avoid caching issues
+      timeout: 5000, // Reduce connection timeout
     });
 
-
-    socket.on('connect', () => {
-      console.log('Socket connected:', socket.id);
-    });
 
     socket.on('connect_error', (error) => {
       console.error('Socket connection error:', error);
@@ -123,13 +149,47 @@ const DashboardLayout = () => {
       upsertNotification(newNotif);
     });
 
+    // ✅ Listen for user status changes with IMMEDIATE handling
+    socket.on('userStatusChanged', (statusEvent: any) => {
+      console.log('[IMMEDIATE] User status changed received:', statusEvent);
 
-    socket.connect();
+      // IMMEDIATE logout for pending or rejected status
+      if (statusEvent.status === 'pending' || statusEvent.status === 'rejected') {
+        console.log('[IMMEDIATE] Status is pending/rejected, logging out immediately');
+
+        // Use immediate execution for logout
+        alert(`Your account status has been changed to ${statusEvent.status}. You will be logged out immediately.`);
+        handleLogout();
+
+      } else if (statusEvent.status === 'approved') {
+        console.log('[IMMEDIATE] Status approved, showing notification');
+        // Show a positive notification for approval
+        const approvalNotif: Notification = {
+          id: generateUUID(),
+          type: 'BID_LIVE', // Reuse existing type for positive notification
+          message: 'Your account has been approved! You can now access all features.',
+          bidId: 'system',
+          timestamp: new Date().toISOString(),
+          isRead: false,
+        };
+        upsertNotification(approvalNotif);
+      }
+    });
+
+    // ✅ Authenticate user with WebSocket immediately after connection
+    socket.on('connect', () => {
+      console.log('Socket connected:', socket.id);
+      if (user?.id) {
+        console.log('Authenticating user immediately:', user.id);
+        socket.emit('authenticate', { userId: user.id });
+        console.log('User authenticated with WebSocket:', user.id);
+      }
+    });
 
     return () => {
       socket.disconnect();
     };
-  }, []);
+  }, [user?.id]); // Add user.id as dependency to reconnect when user changes
 
   const handleLogout = async () => {
     try {
@@ -204,11 +264,10 @@ const DashboardLayout = () => {
               <li key={item.path}>
                 <Link
                   to={item.path}
-                  className={`flex items-center space-x-3 p-2 rounded-lg transition-colors ${
-                    location.pathname === item.path
-                      ? 'bg-green-100 text-green-700'
-                      : 'text-gray-600 hover:bg-gray-100'
-                  }`}
+                  className={`flex items-center space-x-3 p-2 rounded-lg transition-colors ${location.pathname === item.path
+                    ? 'bg-green-100 text-green-700'
+                    : 'text-gray-600 hover:bg-gray-100'
+                    }`}
                 >
                   <span className="text-lg">{item.icon}</span>
                   {sidebarOpen && <span>{item.label}</span>}

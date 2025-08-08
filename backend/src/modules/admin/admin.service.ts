@@ -2,10 +2,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Role, UserStatus } from '@prisma/client'; // Corrected import from UserRole to Role
+import { BidGateway } from '../../gateways/bid.gateway';
 
 @Injectable()
 export class AdminService {
-  constructor(private prisma: PrismaService) { }
+  constructor(
+    private prisma: PrismaService,
+    private bidGateway: BidGateway
+  ) { }
 
   async getAllUsers() {
     return this.prisma.user.findMany({
@@ -32,12 +36,23 @@ export class AdminService {
     else if (status === 'rejected') userStatus = UserStatus.REJECTED;
     else userStatus = UserStatus.PENDING;
 
-    return this.prisma.user.update({
+    const updatedUser = await this.prisma.user.update({
       where: { id: userId },
       data: {
         status: userStatus,
       },
     });
+
+    // Emit WebSocket event to notify the user of status change IMMEDIATELY
+    const emitStartTime = Date.now();
+    console.log(`[AdminService] IMMEDIATE: Emitting status change for user ${userId}: ${status} at ${new Date().toISOString()}`);
+
+    this.bidGateway.emitUserStatusChange(userId, status);
+
+    const emitEndTime = Date.now();
+    console.log(`[AdminService] IMMEDIATE: WebSocket emit completed in ${emitEndTime - emitStartTime}ms`);
+
+    return updatedUser;
   }
 
   async updateUserRole(userId: string, role: Role) { // Use the corrected Role type
