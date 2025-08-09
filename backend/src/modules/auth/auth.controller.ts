@@ -1,23 +1,26 @@
-import { 
-  Controller, 
-  Post, 
+import {
+  Controller,
+  Post,
   Get,
   Param,
-  Body, 
-  HttpCode, 
-  HttpStatus, 
-  UseInterceptors, 
+  Body,
+  HttpCode,
+  HttpStatus,
+  UseInterceptors,
   UploadedFiles,
   Res,
+  Req,
+  UseGuards,
 } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
 import * as fs from 'fs';
 import { AuthService } from './auth.service';
+import { JwtAuthGuard } from './jwt-auth.guard';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private authService: AuthService) { }
 
   @Get('test')
   test() {
@@ -26,30 +29,30 @@ export class AuthController {
 
   @Post('register')
   @UseInterceptors(FileFieldsInterceptor([
-  { name: 'gstCertificate', maxCount: 1 },
-  { name: 'panCard', maxCount: 1 },
-  { name: 'bankDocument', maxCount: 1 },
-  { name: 'authorizedSignatory', maxCount: 1 },
-  { name: 'companyRegistration', maxCount: 1 },
-]))
-async register(
-  @Body() registerDto: any,
-  @UploadedFiles() files: {
-    gstCertificate?: Express.Multer.File[],
-    panCard?: Express.Multer.File[],
-    bankDocument?: Express.Multer.File[],
-    authorizedSignatory?: Express.Multer.File[],
-    companyRegistration?: Express.Multer.File[],
-  },
-) {
-  const cleanedFiles = {};
-  for (const key in files) {
-    if (files[key] && files[key].length > 0) {
-      cleanedFiles[key] = files[key][0];
+    { name: 'gstCertificate', maxCount: 1 },
+    { name: 'panCard', maxCount: 1 },
+    { name: 'bankDocument', maxCount: 1 },
+    { name: 'authorizedSignatory', maxCount: 1 },
+    { name: 'companyRegistration', maxCount: 1 },
+  ]))
+  async register(
+    @Body() registerDto: any,
+    @UploadedFiles() files: {
+      gstCertificate?: Express.Multer.File[],
+      panCard?: Express.Multer.File[],
+      bankDocument?: Express.Multer.File[],
+      authorizedSignatory?: Express.Multer.File[],
+      companyRegistration?: Express.Multer.File[],
+    },
+  ) {
+    const cleanedFiles = {};
+    for (const key in files) {
+      if (files[key] && files[key].length > 0) {
+        cleanedFiles[key] = files[key][0];
+      }
     }
+    return await this.authService.register(registerDto, cleanedFiles);
   }
-  return await this.authService.register(registerDto, cleanedFiles);
-}
 
 
   @HttpCode(HttpStatus.OK)
@@ -75,6 +78,36 @@ async register(
     return this.authService.getUserFolderStructure(userId);
   }
 
+  // Update user documents
+  @Post('update-documents')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileFieldsInterceptor([
+    { name: 'gstCertificate', maxCount: 1 },
+    { name: 'panCard', maxCount: 1 },
+    { name: 'bankDocument', maxCount: 1 },
+    { name: 'authorizedSignatory', maxCount: 1 },
+    { name: 'companyRegistration', maxCount: 1 },
+  ]))
+  async updateDocuments(
+    @Body() updateDto: any,
+    @UploadedFiles() files: {
+      gstCertificate?: Express.Multer.File[],
+      panCard?: Express.Multer.File[],
+      bankDocument?: Express.Multer.File[],
+      authorizedSignatory?: Express.Multer.File[],
+      companyRegistration?: Express.Multer.File[],
+    },
+    @Req() req: any,
+  ) {
+    const cleanedFiles = {};
+    for (const [key, fileArray] of Object.entries(files)) {
+      if (fileArray && fileArray.length > 0) {
+        cleanedFiles[key] = fileArray[0];
+      }
+    }
+    return await this.authService.updateDocuments(req.user.sub, cleanedFiles);
+  }
+
   // Download document file
   @Get('documents/:userId/:documentId')
   async downloadDocument(
@@ -84,11 +117,11 @@ async register(
   ) {
     try {
       const document = await this.authService.getDocumentFile(documentId, userId);
-      
+
       if (fs.existsSync(document.filePath)) {
         res.setHeader('Content-Type', document.mimeType);
         res.setHeader('Content-Disposition', `attachment; filename="${document.originalName}"`);
-        
+
         const fileStream = fs.createReadStream(document.filePath);
         fileStream.pipe(res);
       } else {

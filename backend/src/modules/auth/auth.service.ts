@@ -10,6 +10,7 @@ import * as path from 'path';
 import * as fs from 'fs/promises';
 import { Role, UserStatus } from '@prisma/client';
 import { BidGateway } from '../../gateways/bid.gateway';
+import { FileManager } from '../../utils/file-manager';
 
 @Injectable()
 export class AuthService {
@@ -185,6 +186,99 @@ export class AuthService {
         k.endsWith('Path') && v
       ).length,
     };
+  }
+
+  async updateDocuments(userId: string, files: any) {
+    try {
+      // Get user info for folder structure
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!user) {
+        throw new BadRequestException('User not found');
+      }
+
+      // Get existing document record
+      let userDocument = await this.prisma.userDocument.findUnique({
+        where: { userId },
+      });
+
+      if (!userDocument) {
+        throw new BadRequestException('No existing documents found for user');
+      }
+
+      // Create folder structure
+      const userFolderName = FileManager.generateUserFolderName(user.id, user.email, user.company);
+      const userFolderPath = await FileManager.createUserFolder(userFolderName);
+
+      // Save files and update paths
+      const saveFile = async (docType: string, file: Express.Multer.File | undefined) => {
+        if (!file) return null;
+
+        const typeFolderPath = await FileManager.createDocumentTypeFolder(userFolderPath, docType);
+        const fileName = FileManager.generateFileName(docType, file.originalname);
+        const filePath = path.join(typeFolderPath, fileName);
+
+        await FileManager.saveFile(filePath, file.buffer);
+
+        // Return relative path for database storage
+        return path.relative(process.cwd(), filePath).replace(/\\/g, '/');
+      };
+
+      // Update only the documents that were provided
+      const updateData: any = {};
+
+      if (files.gstCertificate) {
+        const gstPath = await saveFile('gst', files.gstCertificate);
+        if (gstPath) updateData.gstCertificatePath = gstPath;
+      }
+
+      if (files.panCard) {
+        const panPath = await saveFile('pan', files.panCard);
+        if (panPath) updateData.panCardPath = panPath;
+      }
+
+      if (files.bankDocument) {
+        const bankPath = await saveFile('bank', files.bankDocument);
+        if (bankPath) updateData.bankDocumentPath = bankPath;
+      }
+
+      if (files.authorizedSignatory) {
+        const signatoryPath = await saveFile('signatory', files.authorizedSignatory);
+        if (signatoryPath) updateData.authorizedSignatoryPath = signatoryPath;
+      }
+
+      if (files.companyRegistration) {
+        const regPath = await saveFile('registration', files.companyRegistration);
+        if (regPath) updateData.companyRegistrationPath = regPath;
+      }
+
+      // Update the database record
+      const updatedDocument = await this.prisma.userDocument.update({
+        where: { userId },
+        data: updateData,
+      });
+
+      // Update user status to pending for re-verification if required documents were updated
+      const requiredDocsUpdated = !!(files.gstCertificate || files.panCard || files.bankDocument || files.companyRegistration);
+      if (requiredDocsUpdated) {
+        await this.prisma.user.update({
+          where: { id: userId },
+          data: { status: 'PENDING' },
+        });
+      }
+
+      return {
+        message: 'Documents updated successfully',
+        updatedFields: Object.keys(updateData),
+        statusChanged: requiredDocsUpdated,
+      };
+
+    } catch (error) {
+      console.error('Document update error:', error);
+      throw new BadRequestException(error.message || 'Failed to update documents');
+    }
   }
 
   async getDocumentFile(documentType: string, userId: string) {

@@ -39,6 +39,7 @@ import GatePass from "./pages/dashboards/GatePass";
 
 // Recycler/Aggregator Pages
 import Participated from "./pages/dashboards/Participated";
+import UploadDocuments from "./pages/dashboards/UploadDocuments";
 
 const queryClient = new QueryClient();
 
@@ -98,8 +99,10 @@ const App = () => (
               {/* Recycler/Aggregator Routes */}
               <Route path="recycler" element={<ProtectedRoute allowedRoles={['recycler', 'aggregator']}><RecyclerDashboard /></ProtectedRoute>} />
               <Route path="recycler/participated" element={<ProtectedRoute allowedRoles={['recycler', 'aggregator']}><Participated /></ProtectedRoute>} />
+              <Route path="recycler/upload-documents" element={<ProtectedRoute allowedRoles={['recycler', 'aggregator']}><UploadDocuments /></ProtectedRoute>} />
               <Route path="aggregator" element={<ProtectedRoute allowedRoles={['aggregator']}><RecyclerDashboard /></ProtectedRoute>} />
               <Route path="aggregator/participated" element={<ProtectedRoute allowedRoles={['aggregator']}><Participated /></ProtectedRoute>} />
+              <Route path="aggregator/upload-documents" element={<ProtectedRoute allowedRoles={['aggregator']}><UploadDocuments /></ProtectedRoute>} />
             </Route>
 
             {/* Not Found Route */}

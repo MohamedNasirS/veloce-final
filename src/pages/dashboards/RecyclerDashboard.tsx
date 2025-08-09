@@ -162,7 +162,7 @@ const RecyclerDashboard = () => {
     <div className="space-y-6">
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Document Links">
         {modalContent.length > 0
-        ? <ul className="space-y-2">{modalContent.map((doc, idx) => (
+          ? <ul className="space-y-2">{modalContent.map((doc, idx) => (
             <li key={doc.id} className="flex items-center gap-2">
               <span className="text-sm text-gray-600">{idx + 1}.</span>
               <a href={doc.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
@@ -170,7 +170,7 @@ const RecyclerDashboard = () => {
               </a>
             </li>
           ))}</ul>
-        : <p className="text-gray-600">No documents available.</p>}
+          : <p className="text-gray-600">No documents available.</p>}
       </Modal>
 
       {/* PARTICIPATION STATS BASED ON PARTICIPATED ENDPOINT */}
@@ -219,8 +219,8 @@ const RecyclerDashboard = () => {
               </a>
             </Button>
             <Button asChild variant="outline">
-              <a href={`/dashboard/${user?.role}/upload-proof`} className="w-full h-20 text-lg">
-                📸 Upload Documents
+              <a href={`/dashboard/${user?.role}/upload-documents`} className="w-full h-20 text-lg">
+                📄 Upload Documents
               </a>
             </Button>
           </div>
@@ -281,12 +281,12 @@ const RecyclerDashboard = () => {
           </div>
           {allBids.filter(bid => bid.creator?.id !== user?.id && bid.status &&
             bid.status.toLowerCase() === 'live').length === 0 && (
-            <div className="text-center py-8">
-              <div className="text-6xl mb-4">🔍</div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No active bids</h3>
-              <p className="text-gray-500">Check back later for new waste auctions</p>
-            </div>
-          )}
+              <div className="text-center py-8">
+                <div className="text-6xl mb-4">🔍</div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No active bids</h3>
+                <p className="text-gray-500">Check back later for new waste auctions</p>
+              </div>
+            )}
         </CardContent>
       </Card>
 

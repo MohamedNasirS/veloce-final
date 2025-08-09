@@ -14,6 +14,7 @@ import {
   Post,
 } from '@nestjs/common';
 import { AdminService } from './admin.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { Response } from 'express';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -23,10 +24,11 @@ import { Role } from '@prisma/client'; // Corrected import from UserRole to Role
 @Controller('admin')
 export class AdminController {
   private readonly logger = new Logger(AdminController.name);
-  
+
   constructor(
     private readonly adminService: AdminService,
-  ) {}
+    private readonly prisma: PrismaService,
+  ) { }
 
   @Get('users')
   getAllUsers() {
@@ -117,23 +119,88 @@ export class AdminController {
     @Res() res: Response
   ) {
     this.logger.log(`GET /api/admin/users/${userId}/documents`);
-    const dir = path.join(process.cwd(), 'uploads', 'users', userId);
+
     try {
-      if (!fs.existsSync(dir)) {
-        throw new NotFoundException('Directory not found');
+      // Get user document records from database
+      const userDocument = await this.prisma.userDocument.findUnique({
+        where: { userId },
+      });
+
+      if (!userDocument) {
+        return res.status(404).json({ message: 'No documents found for this user.' });
       }
 
       const baseUrl = 'http://147.93.27.172:3001'; // Replace with your actual base URL from config
+      const documents = [];
 
-      const files = fs.readdirSync(dir);
-      const documents = files.map((filename) => ({
-        name: filename,
-        url: `${baseUrl}/uploads/users/${userId}/${filename}`,
-      }));
+      // Document type mapping
+      const documentTypes = {
+        gstCertificatePath: { name: 'GST Certificate', type: 'gstCertificate' },
+        panCardPath: { name: 'PAN Card', type: 'panCard' },
+        bankDocumentPath: { name: 'Bank Document', type: 'bankDocument' },
+        authorizedSignatoryPath: { name: 'Authorized Signatory', type: 'authorizedSignatory' },
+        companyRegistrationPath: { name: 'Company Registration', type: 'companyRegistration' }
+      };
 
-      return res.json({ documents });
+      // Check each document type
+      for (const [pathField, docInfo] of Object.entries(documentTypes)) {
+        const filePath = userDocument[pathField];
+        if (filePath) {
+          const fullPath = path.join(process.cwd(), filePath);
+
+          // Check if file exists on disk
+          if (fs.existsSync(fullPath)) {
+            const fileName = path.basename(filePath);
+            documents.push({
+              name: docInfo.name,
+              type: docInfo.type,
+              fileName: fileName,
+              url: `${baseUrl}/${filePath.replace(/\\/g, '/')}`,
+              uploadedAt: userDocument.uploadedAt,
+              exists: true
+            });
+          } else {
+            // File path exists in DB but file is missing on disk
+            documents.push({
+              name: docInfo.name,
+              type: docInfo.type,
+              fileName: 'File missing',
+              url: null,
+              uploadedAt: userDocument.uploadedAt,
+              exists: false
+            });
+          }
+        }
+      }
+
+      // If no documents found in database, try the old file system approach
+      if (documents.length === 0) {
+        const oldDir = path.join(process.cwd(), 'uploads', 'users', userId);
+        if (fs.existsSync(oldDir)) {
+          const files = fs.readdirSync(oldDir);
+          files.forEach(filename => {
+            documents.push({
+              name: filename,
+              type: 'unknown',
+              fileName: filename,
+              url: `${baseUrl}/uploads/users/${userId}/${filename}`,
+              uploadedAt: null,
+              exists: true,
+              legacy: true
+            });
+          });
+        }
+      }
+
+      return res.json({
+        documents,
+        totalDocuments: documents.filter(doc => doc.exists).length,
+        userId
+      });
+
     } catch (error) {
-      return res.status(404).json({ message: 'No documents found for this user.' });
+      this.logger.error(`Error fetching documents for user ${userId}:`, error);
+      return res.status(500).json({ message: 'Error fetching user documents.' });
     }
   }
 }
