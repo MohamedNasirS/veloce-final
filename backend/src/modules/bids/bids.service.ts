@@ -460,6 +460,8 @@ export class BidsService {
       where: { id: bidId },
       data: {
         gatePassPath: filePath, // must be relative like 'uploads/gatepass/file.pdf'
+        gatePassUploadedBy: userId, // Track who uploaded the gate pass
+        gatePassUploadedAt: new Date(), // Track when it was uploaded
       },
     });
 

@@ -47,6 +47,7 @@ model User {
   bidsCreated          Bid[]            @relation("BidCreator")
   bidsParticipated     BidParticipant[]
   bidsWon              Bid[]            @relation("BidWinner")
+  gatePassesUploaded   Bid[]            @relation("GatePassUploader")
   bidEvents            BidEvent[]       // 🔥 NEW: relation to BidEvent
 
   createdAt            DateTime         @default(now())
@@ -85,11 +86,14 @@ model Bid {
   creator      User             @relation("BidCreator", fields: [creatorId], references: [id])
   images       BidImage[]
   participants BidParticipant[]
-  winnerId     String?
-  winner       User?            @relation("BidWinner", fields: [winnerId], references: [id])
-  gatePassPath String?          // Field for gate pass
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
+  winnerId            String?
+  winner              User?            @relation("BidWinner", fields: [winnerId], references: [id])
+  gatePassPath        String?          // Field for gate pass
+  gatePassUploadedBy  String?          // Who uploaded the gate pass (userId)
+  gatePassUploader    User?            @relation("GatePassUploader", fields: [gatePassUploadedBy], references: [id])
+  gatePassUploadedAt  DateTime?        // When the gate pass was uploaded
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
 
   events       BidEvent[]       // 🔥 NEW: relation to BidEvent
 }

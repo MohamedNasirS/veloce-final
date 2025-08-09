@@ -25,6 +25,8 @@ import AdminDashboard from "./pages/dashboards/AdminDashboard";
 import AdminWinnerSelection from "./pages/dashboards/AdminWinnerSelection";
 import AdminUsers from "./pages/dashboards/AdminUsers";
 import AdminBidManagement from "./pages/dashboards/AdminBidManagement";
+import AdminGatePassList from "./pages/dashboards/AdminGatePassList";
+import AdminGatePass from "./pages/dashboards/AdminGatePass";
 import UserRegistrationMonitor from "./components/UserRegistrationMonitor";
 
 // Waste Generator Pages
@@ -79,6 +81,8 @@ const App = () => (
               <Route path="admin/users" element={<ProtectedRoute allowedRoles={['admin']}><AdminUsers /></ProtectedRoute>} />
               <Route path="admin/bids" element={<ProtectedRoute allowedRoles={['admin']}><AdminBidManagement /></ProtectedRoute>} />
               <Route path="admin/winner-selection" element={<ProtectedRoute allowedRoles={['admin']}><AdminWinnerSelection /></ProtectedRoute>} />
+              <Route path="admin/gate-passes" element={<ProtectedRoute allowedRoles={['admin']}><AdminGatePassList /></ProtectedRoute>} />
+              <Route path="admin/gate-passes/:bidId" element={<ProtectedRoute allowedRoles={['admin']}><AdminGatePass /></ProtectedRoute>} />
               <Route path="admin/monitor" element={<ProtectedRoute allowedRoles={['admin']}><UserRegistrationMonitor /></ProtectedRoute>} />
 
               {/* Waste Generator Routes */}
