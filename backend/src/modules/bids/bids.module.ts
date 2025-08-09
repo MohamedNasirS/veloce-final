@@ -10,5 +10,6 @@ import { BidGateway } from '../../gateways/bid.gateway';
   imports: [PrismaModule, MulterModule.register({ dest: './uploads/bids' })],
   controllers: [BidsController],
   providers: [BidsService, BidStatusScheduler, BidGateway],
+  exports: [BidsService],
 })
-export class BidsModule {}
+export class BidsModule { }

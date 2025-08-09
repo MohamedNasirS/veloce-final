@@ -336,12 +336,53 @@ export class BidsService {
   }
 
 
-  async selectWinner(bidId: string, winnerId: string) {
-    const bid = await this.prisma.bid.findUnique({ where: { id: bidId } });
+  async selectWinner(bidId: string, winnerId: string, selectedById?: string) {
+    // Get the bid with creator and winner details
+    const bid = await this.prisma.bid.findUnique({
+      where: { id: bidId },
+      include: {
+        creator: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            company: true,
+          },
+        },
+      },
+    });
+
     if (!bid) throw new NotFoundException('Bid not found');
 
-    console.log('Selecting winner:', { bidId, winnerId });
+    // Get the winner details
+    const winner = await this.prisma.user.findUnique({
+      where: { id: winnerId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        company: true,
+      },
+    });
 
+    if (!winner) throw new NotFoundException('Winner not found');
+
+    // Get the user who selected the winner (for tracking)
+    let selectedBy = null;
+    if (selectedById) {
+      selectedBy = await this.prisma.user.findUnique({
+        where: { id: selectedById },
+        select: {
+          id: true,
+          name: true,
+          role: true,
+        },
+      });
+    }
+
+    console.log('Selecting winner:', { bidId, winnerId, selectedBy: selectedBy?.name });
+
+    // Create bid event for winner selection
     await this.prisma.bidEvent.create({
       data: {
         bidId,
@@ -351,10 +392,40 @@ export class BidsService {
       },
     });
 
-    return this.prisma.bid.update({
+    // Update the bid with winner
+    const updatedBid = await this.prisma.bid.update({
       where: { id: bidId },
       data: { winnerId },
+      include: {
+        creator: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            company: true,
+          },
+        },
+        winner: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            company: true,
+          },
+        },
+      },
     });
+
+    // Emit WebSocket event for real-time updates
+    this.bidGateway.emitWinnerSelected(
+      updatedBid,
+      winner,
+      selectedBy || { id: 'system', name: 'System', role: 'system' }
+    );
+
+    console.log(`Winner selected for bid ${bidId}: ${winner.name} (${winner.company})`);
+
+    return updatedBid;
   }
   async refreshBidStatuses() {
     const now = new Date();

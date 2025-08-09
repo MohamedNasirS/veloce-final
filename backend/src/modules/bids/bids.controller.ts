@@ -14,7 +14,7 @@ import { BidHistory } from './types';
 
 @Controller('bids')
 export class BidsController {
-  constructor(private readonly bidsService: BidsService) {}
+  constructor(private readonly bidsService: BidsService) { }
 
   @Post()
   @UseInterceptors(
@@ -84,8 +84,8 @@ export class BidsController {
   }
 
   @Patch(':id/select-winner')
-  selectWinner(@Param('id') bidId: string, @Body() body: { winnerId: string }) {
-    return this.bidsService.selectWinner(bidId, body.winnerId);
+  selectWinner(@Param('id') bidId: string, @Body() body: { winnerId: string; selectedById?: string }) {
+    return this.bidsService.selectWinner(bidId, body.winnerId, body.selectedById);
   }
 
   @Get('refresh-status')
@@ -102,29 +102,29 @@ export class BidsController {
   ) {
     return this.bidsService.getGatePass(bidId, userId);
   }
-@Post(':id/gate-pass')
-@UseInterceptors(
-  FileInterceptor('gatePass', {
-    storage: diskStorage({
-      destination: './uploads/gatepasses',
-      filename: (req, file, cb) => {
-        const ext = path.extname(file.originalname);
-        cb(null, `${uuidv4()}${ext}`);
-      },
+  @Post(':id/gate-pass')
+  @UseInterceptors(
+    FileInterceptor('gatePass', {
+      storage: diskStorage({
+        destination: './uploads/gatepasses',
+        filename: (req, file, cb) => {
+          const ext = path.extname(file.originalname);
+          cb(null, `${uuidv4()}${ext}`);
+        },
+      }),
     }),
-  }),
-)
-uploadGatePass(
-  @Param('id') bidId: string,
-  @UploadedFile() file: Express.Multer.File,
-  @Body('userId') userId: string,
-) {
-  return this.bidsService.uploadGatePass(bidId, userId, `/uploads/gatepasses/${file.filename}`);
-}
+  )
+  uploadGatePass(
+    @Param('id') bidId: string,
+    @UploadedFile() file: Express.Multer.File,
+    @Body('userId') userId: string,
+  ) {
+    return this.bidsService.uploadGatePass(bidId, userId, `/uploads/gatepasses/${file.filename}`);
+  }
 
-@Get('participated/:userId')
-async getParticipatedBids(@Param('userId') userId: string) {
-  return this.bidsService.getParticipatedBids(userId);
-}
+  @Get('participated/:userId')
+  async getParticipatedBids(@Param('userId') userId: string) {
+    return this.bidsService.getParticipatedBids(userId);
+  }
 
 }

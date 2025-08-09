@@ -7,6 +7,9 @@ interface WebSocketHookOptions {
     onBidStatusChanged?: (event: any) => void;
     onBidUpdated?: (event: any) => void;
     onBidCreated?: (event: any) => void; // For bid creators
+    onWinnerSelected?: (event: any) => void; // For general winner selection
+    onWinnerSelectedForMyBid?: (event: any) => void; // For waste generator's own bids
+    onWonBid?: (event: any) => void; // For winners
     autoConnect?: boolean;
 }
 
@@ -83,6 +86,27 @@ export const useWebSocket = (options: WebSocketHookOptions = {}) => {
             socket.on('bidCreated', (event) => {
                 console.log(`✨ [useWebSocket] Bid created event received:`, event);
                 options.onBidCreated!(event);
+            });
+        }
+
+        if (options.onWinnerSelected) {
+            socket.on('winnerSelected', (event) => {
+                console.log(`🏆 [useWebSocket] Winner selected event received:`, event);
+                options.onWinnerSelected!(event);
+            });
+        }
+
+        if (options.onWinnerSelectedForMyBid) {
+            socket.on('winnerSelectedForMyBid', (event) => {
+                console.log(`🎯 [useWebSocket] Winner selected for my bid event received:`, event);
+                options.onWinnerSelectedForMyBid!(event);
+            });
+        }
+
+        if (options.onWonBid) {
+            socket.on('wonBid', (event) => {
+                console.log(`🎉 [useWebSocket] Won bid event received:`, event);
+                options.onWonBid!(event);
             });
         }
 

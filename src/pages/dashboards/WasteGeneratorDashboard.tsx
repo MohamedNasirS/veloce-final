@@ -160,6 +160,45 @@ const WasteGeneratorDashboard: React.FC = () => {
           bid.id === event.bid.id ? { ...bid, ...event.bid } : bid
         ));
       }
+    },
+    onWinnerSelected: (event) => {
+      console.log('[WasteGeneratorDashboard] 🏆 IMMEDIATE: Winner selected received:', event);
+
+      // Update bid if it belongs to current user
+      if (event.bid.creatorId === user?.id) {
+        setBids(prev => prev.map(bid =>
+          bid.id === event.bid.id
+            ? { ...bid, winnerId: event.winner.id, winner: event.winner }
+            : bid
+        ));
+
+        toast({
+          title: '🏆 Winner Selected!',
+          description: `${event.winner.name} has been selected as winner for "${event.bid.lotName}"`,
+          duration: 5000,
+        });
+
+        console.log('[WasteGeneratorDashboard] Updated bid with winner information');
+      }
+    },
+    onWinnerSelectedForMyBid: (event) => {
+      console.log('[WasteGeneratorDashboard] 🎯 IMMEDIATE: Winner selected for my bid received:', event);
+
+      // Update the specific bid with winner information
+      setBids(prev => prev.map(bid =>
+        bid.id === event.bid.id
+          ? { ...bid, winnerId: event.winner.id, winner: event.winner }
+          : bid
+      ));
+
+      // Show special notification for waste generator's own bid
+      toast({
+        title: '🎯 Winner Selected for Your Bid!',
+        description: `${event.winner.name} from ${event.winner.company} has been selected as winner for "${event.bid.lotName}"`,
+        duration: 7000,
+      });
+
+      console.log('[WasteGeneratorDashboard] Updated my bid with winner information');
     }
   });
 

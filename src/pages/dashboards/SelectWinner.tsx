@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { io, Socket } from 'socket.io-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -42,12 +44,15 @@ export default function SelectWinner() {
   const { bidId } = useParams<{ bidId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [bid, setBid] = useState<Bid | null>(null);
   const [biddingHistory, setBiddingHistory] = useState<BidHistory | null>(null);
   const [selectedWinner, setSelectedWinner] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
 
   const fetchData = async () => {
     if (!bidId) {
@@ -87,7 +92,77 @@ export default function SelectWinner() {
 
   useEffect(() => {
     fetchData();
-  }, [bidId, toast]);
+    setupWebSocket();
+  }, [bidId, toast, user]);
+
+  const setupWebSocket = () => {
+    if (!user) return;
+
+    const newSocket = io('http://localhost:3001', {
+      transports: ['websocket'],
+    });
+
+    newSocket.on('connect', () => {
+      console.log('Connected to WebSocket server for winner selection');
+      setIsConnected(true);
+
+      newSocket.emit('authenticate', {
+        userId: user.id,
+        userRole: user.role,
+      });
+    });
+
+    newSocket.on('disconnect', () => {
+      console.log('Disconnected from WebSocket server');
+      setIsConnected(false);
+    });
+
+    // Listen for winner selection events
+    newSocket.on('winnerSelected', (data) => {
+      console.log('Winner selected event received:', data);
+
+      // Update the bidding history if it's for this bid
+      if (data.bid.id === bidId) {
+        setBiddingHistory(prev => prev ? {
+          ...prev,
+          winnerId: data.winner.id
+        } : null);
+
+        toast({
+          title: 'Winner Selected!',
+          description: `${data.winner.name} has been selected as the winner.`,
+        });
+
+        // Navigate back to dashboard after a short delay
+        setTimeout(() => {
+          navigate('/dashboard/waste_generator');
+        }, 2000);
+      }
+    });
+
+    // Listen for winner selection events specific to waste generator's bids
+    newSocket.on('winnerSelectedForMyBid', (data) => {
+      console.log('Winner selected for my bid event received:', data);
+
+      if (data.bid.id === bidId) {
+        setBiddingHistory(prev => prev ? {
+          ...prev,
+          winnerId: data.winner.id
+        } : null);
+
+        toast({
+          title: 'Winner Selected for Your Bid!',
+          description: `${data.winner.name} has been selected as the winner for "${data.bid.lotName}".`,
+        });
+      }
+    });
+
+    setSocket(newSocket);
+
+    return () => {
+      newSocket.close();
+    };
+  };
 
   const handleSelectWinner = async () => {
     if (!bidId || !selectedWinner) {
@@ -102,6 +177,7 @@ export default function SelectWinner() {
     try {
       await axios.patch(`${import.meta.env.VITE_API_URL}/api/bids/${bidId}/select-winner`, {
         winnerId: selectedWinner,
+        selectedById: user?.id, // Pass the current user ID for tracking
       });
       toast({
         title: 'Success',
@@ -161,9 +237,17 @@ export default function SelectWinner() {
         <CardHeader className="border-b">
           <div className="flex justify-between items-center">
             <CardTitle className="text-2xl">Select Winner for {bid.lotName}</CardTitle>
-            <span className={`text-sm font-medium px-3 py-1 rounded-full ${getStatusColor(bid.status)}`}>
-              {bid.status}
-            </span>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                <span className="text-sm text-gray-600">
+                  {isConnected ? 'Real-time Connected' : 'Disconnected'}
+                </span>
+              </div>
+              <span className={`text-sm font-medium px-3 py-1 rounded-full ${getStatusColor(bid.status)}`}>
+                {bid.status}
+              </span>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="pt-6">

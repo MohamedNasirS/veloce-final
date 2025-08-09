@@ -443,6 +443,46 @@ export class BidGateway implements OnGatewayInit, OnGatewayConnection, OnGateway
     this.logger.log(`✅ [IMMEDIATE] User rejected event broadcasted to all clients`);
   }
 
+  // 🆕 NEW: Real-time winner selection notification
+  emitWinnerSelected(bid: any, winner: any, selectedBy: any) {
+    const winnerSelectedEvent = {
+      type: 'WINNER_SELECTED',
+      bid: {
+        id: bid.id,
+        lotName: bid.lotName,
+        wasteType: bid.wasteType,
+        quantity: bid.quantity,
+        unit: bid.unit,
+        currentPrice: bid.currentPrice,
+        creatorId: bid.creatorId,
+      },
+      winner: {
+        id: winner.id,
+        name: winner.name,
+        email: winner.email,
+        company: winner.company,
+      },
+      selectedBy: {
+        id: selectedBy.id,
+        name: selectedBy.name,
+        role: selectedBy.role,
+      },
+      timestamp: new Date().toISOString(),
+    };
+
+    this.logger.log(`🚀 [IMMEDIATE] Broadcasting winner selected event: ${bid.id} - Winner: ${winner.name}`);
+
+    // Emit to all connected clients
+    this.server.emit('winnerSelected', winnerSelectedEvent);
+
+    // Emit to specific users
+    this.server.to(`user_${bid.creatorId}`).emit('winnerSelectedForMyBid', winnerSelectedEvent);
+    this.server.to(`user_${winner.id}`).emit('wonBid', winnerSelectedEvent);
+    this.server.to('admins').emit('winnerSelectedAdmin', winnerSelectedEvent);
+
+    this.logger.log(`✅ [IMMEDIATE] Winner selected event broadcasted to all relevant parties`);
+  }
+
   // Helper method to emit events to all admin users (LEGACY - keeping for compatibility)
   private emitToAdminUsers(eventName: string, eventData: any) {
     // Use the new enhanced room-based method
