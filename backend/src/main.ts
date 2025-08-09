@@ -15,9 +15,9 @@ class CorsIoAdapter extends IoAdapter {
   createIOServer(port: number, options?: any): any {
     const allowedOrigins = [
       'http://147.93.27.172/marketplace',
-      'http://localhost:8080/marketplace',
-      'http://localhost:5173', // Add development server
-      'http://localhost', // Add localhost
+      'http://147.93.27.172:8080/marketplace',
+      'http://147.93.27.172:5173', // Add development server
+      'http://147.93.27.172', // Add 147.93.27.172
     ];
 
     const corsOptions = {
@@ -64,9 +64,9 @@ async function bootstrap() {
 
   const allowedOrigins = [
     'http://147.93.27.172/marketplace',
-    'http://localhost:8080/marketplace',
-    'http://localhost:5173', // Add development server
-    'http://localhost', // Add localhost
+    'http://147.93.27.172:8080/marketplace',
+    'http://147.93.27.172:5173', // Add development server
+    'http://147.93.27.172', // Add 147.93.27.172
   ];
 
   // Enable CORS with more permissive settings for debugging

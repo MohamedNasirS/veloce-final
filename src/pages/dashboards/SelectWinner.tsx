@@ -98,7 +98,7 @@ export default function SelectWinner() {
   const setupWebSocket = () => {
     if (!user) return;
 
-    const newSocket = io('http://localhost:3001', {
+    const newSocket = io('http://147.93.27.172:3001', {
       transports: ['websocket'],
     });
 
