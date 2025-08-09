@@ -40,6 +40,7 @@ import GatePass from "./pages/dashboards/GatePass";
 // Recycler/Aggregator Pages
 import Participated from "./pages/dashboards/Participated";
 import UploadDocuments from "./pages/dashboards/UploadDocuments";
+import WasteGeneratorUploadDocuments from "./pages/dashboards/WasteGeneratorUploadDocuments";
 
 const queryClient = new QueryClient();
 
@@ -91,6 +92,7 @@ const App = () => (
               <Route path="waste_generator/create-bid" element={<ProtectedRoute allowedRoles={['waste_generator']}><CreateBid /></ProtectedRoute>} />
               <Route path="waste_generator/my-bids" element={<ProtectedRoute allowedRoles={['waste_generator']}><MyBids /></ProtectedRoute>} />
               <Route path="waste_generator/select-winner/:bidId" element={<ProtectedRoute allowedRoles={['waste_generator']}><SelectWinner /></ProtectedRoute>} />
+              <Route path="waste_generator/upload-documents" element={<ProtectedRoute allowedRoles={['waste_generator']}><WasteGeneratorUploadDocuments /></ProtectedRoute>} />
               {/* --- ADDED GATE PASS ROUTES --- */}
               <Route path="waste_generator/gate-passes" element={<ProtectedRoute allowedRoles={['waste_generator']}><GatePassList /></ProtectedRoute>} />
               <Route path="waste_generator/gate-passes/:bidId" element={<ProtectedRoute allowedRoles={['waste_generator']}><GatePass /></ProtectedRoute>} />

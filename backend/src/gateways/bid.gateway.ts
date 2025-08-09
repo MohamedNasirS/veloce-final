@@ -298,6 +298,86 @@ export class BidGateway implements OnGatewayInit, OnGatewayConnection, OnGateway
     this.logger.log(`✅ [IMMEDIATE] Status change broadcasted to ${totalNotified} admin sockets + creator + waste generators`);
   }
 
+  // 🚀 NEW: Document update notifications for real-time admin updates
+  emitDocumentUpdated(userId: string, userInfo: any, updatedFields: string[]) {
+    const documentUpdateEvent = {
+      type: 'DOCUMENT_UPDATED',
+      userId: userId,
+      user: {
+        id: userInfo.id,
+        name: userInfo.name,
+        email: userInfo.email,
+        company: userInfo.company,
+        role: userInfo.role,
+      },
+      updatedFields: updatedFields,
+      message: `${userInfo.name} (${userInfo.company}) updated ${updatedFields.length} document(s)`,
+      timestamp: new Date().toISOString(),
+    };
+
+    this.logger.log(`🚀 [IMMEDIATE] Broadcasting document update to admins: User ${userId} updated ${updatedFields.join(', ')}`);
+
+    // Method 1: Emit to admin room (most efficient)
+    this.server.to('admins').emit('documentUpdated', documentUpdateEvent);
+    this.logger.log(`📡 [IMMEDIATE] Sent document update to admin room`);
+
+    // Method 2: Fallback - direct socket emission to ensure delivery
+    let adminCount = 0;
+    this.adminSockets.forEach(socketId => {
+      const socket = this.server.sockets.sockets.get(socketId);
+      if (socket && socket.connected) {
+        socket.emit('documentUpdated', documentUpdateEvent);
+        adminCount++;
+      }
+    });
+
+    this.logger.log(`✅ [IMMEDIATE] Document update broadcasted to ${adminCount} admin sockets`);
+  }
+
+  // 🚀 NEW: User status change due to document update
+  emitUserStatusChangedDueToDocuments(userId: string, userInfo: any, newStatus: string, reason: string) {
+    const statusChangeEvent = {
+      type: 'USER_STATUS_CHANGED_DOCUMENTS',
+      userId: userId,
+      user: {
+        id: userInfo.id,
+        name: userInfo.name,
+        email: userInfo.email,
+        company: userInfo.company,
+        role: userInfo.role,
+      },
+      newStatus: newStatus,
+      reason: reason,
+      message: `${userInfo.name}'s status changed to ${newStatus} due to document updates`,
+      timestamp: new Date().toISOString(),
+    };
+
+    this.logger.log(`🚀 [IMMEDIATE] Broadcasting user status change due to documents: User ${userId} → ${newStatus}`);
+
+    // Send to admins
+    this.server.to('admins').emit('userStatusChangedDocuments', statusChangeEvent);
+
+    // Send to the specific user
+    this.server.to(`user_${userId}`).emit('userStatusChanged', {
+      type: 'USER_STATUS_CHANGED',
+      status: newStatus,
+      message: `Your account status has been changed to ${newStatus.toLowerCase()} due to document updates`,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Fallback direct emission to admins
+    let adminCount = 0;
+    this.adminSockets.forEach(socketId => {
+      const socket = this.server.sockets.sockets.get(socketId);
+      if (socket && socket.connected) {
+        socket.emit('userStatusChangedDocuments', statusChangeEvent);
+        adminCount++;
+      }
+    });
+
+    this.logger.log(`✅ [IMMEDIATE] User status change due to documents broadcasted to ${adminCount} admin sockets + user`);
+  }
+
   // 🚀 ENHANCED: Real-time bid updates for live bidding
   emitBidUpdateToAll(bid: any) {
     const bidUpdateEvent = {

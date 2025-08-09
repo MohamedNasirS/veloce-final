@@ -5,6 +5,7 @@ import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { useAuth } from '../../contexts/AuthContext';
 import { useWebSocket } from '../../hooks/useWebSocket';
+import DocumentUpdateMonitor from '../../components/DocumentUpdateMonitor';
 import axios from 'axios';
 
 const AdminDashboard = () => {
@@ -257,6 +258,9 @@ const AdminDashboard = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Document Update Monitor */}
+      <DocumentUpdateMonitor />
     </div>
   );
 };

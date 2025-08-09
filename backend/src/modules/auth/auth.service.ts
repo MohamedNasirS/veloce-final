@@ -269,6 +269,19 @@ export class AuthService {
         });
       }
 
+      // 🚀 NEW: Emit real-time document update notification to admins
+      this.bidGateway.emitDocumentUpdated(userId, user, Object.keys(updateData));
+
+      // 🚀 NEW: Emit user status change if status was updated
+      if (requiredDocsUpdated) {
+        this.bidGateway.emitUserStatusChangedDueToDocuments(
+          userId,
+          user,
+          'PENDING',
+          'Document updates require re-verification'
+        );
+      }
+
       return {
         message: 'Documents updated successfully',
         updatedFields: Object.keys(updateData),
