@@ -6,6 +6,7 @@ import { Badge } from '../../components/ui/badge';
 import { useAuth } from '../../contexts/AuthContext';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import DocumentUpdateMonitor from '../../components/DocumentUpdateMonitor';
+import VendorSuccessRateCard from '../../components/VendorSuccessRateCard';
 import axios from 'axios';
 
 const AdminDashboard = () => {
@@ -258,6 +259,12 @@ const AdminDashboard = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Vendor Performance Analytics */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <VendorSuccessRateCard showTopPerformers={true} limit={10} />
+        <VendorSuccessRateCard showStats={true} />
+      </div>
 
       {/* Document Update Monitor */}
       <DocumentUpdateMonitor />

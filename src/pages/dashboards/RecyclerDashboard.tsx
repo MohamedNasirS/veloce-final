@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { useAuth } from '../../contexts/AuthContext';
+import VendorSuccessRateCard from '../../components/VendorSuccessRateCard';
 import { io } from 'socket.io-client';
 
 // Modal for viewing documents
@@ -289,6 +290,9 @@ const RecyclerDashboard = () => {
             )}
         </CardContent>
       </Card>
+
+      {/* Vendor Success Rate Section */}
+      <VendorSuccessRateCard userId={user?.id} />
 
       {myParticipations.length > 0 && (
         <Card>

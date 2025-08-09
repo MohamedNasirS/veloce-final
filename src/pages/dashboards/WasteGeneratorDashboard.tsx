@@ -6,6 +6,7 @@ import { Badge } from '../../components/ui/badge';
 import { useAuth } from '../../contexts/AuthContext';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import { useToast } from '../../hooks/use-toast';
+import VendorSuccessRateCard from '../../components/VendorSuccessRateCard';
 import axios from 'axios';
 
 interface BidParticipant {
@@ -274,7 +275,7 @@ const WasteGeneratorDashboard: React.FC = () => {
       </div>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-2xl font-bold">{bids.length}</CardTitle>
@@ -299,6 +300,8 @@ const WasteGeneratorDashboard: React.FC = () => {
             <CardDescription>Total Revenue</CardDescription>
           </CardHeader>
         </Card>
+        {/* Vendor Success Rate Card */}
+        <VendorSuccessRateCard userId={user?.id} minimal={true} />
       </div>
 
       {/* Quick Actions */}

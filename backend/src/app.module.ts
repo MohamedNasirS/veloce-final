@@ -8,6 +8,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { BidsModule } from './modules/bids/bids.module';
 import { UserModule } from './modules/user/user.module';
+import { VendorMetricsModule } from './modules/vendor-metrics/vendor-metrics.module';
 import { ConfigModule } from '@nestjs/config';
 
 @Module({
@@ -23,6 +24,7 @@ import { ConfigModule } from '@nestjs/config';
     AdminModule,
     BidsModule,
     UserModule,
+    VendorMetricsModule,
   ],
 })
 export class AppModule { }
