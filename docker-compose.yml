@@ -10,7 +10,7 @@ services:
     environment:
       - HOST=0.0.0.0
       - PORT=3001
-      - BASE_URL=http://147.93.27.172:3001
+      - BASE_URL=http://backend:3001
       - ADMIN_EMAIL=admin@gmail.com
       - ADMIN_PASSWORD=admin@123
       - DATABASE_URL=prisma+postgres://accelerate.prisma-data.net/?api_key=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqd3RfaWQiOjEsInNlY3VyZV9rZXkiOiJza19tSUpsbEgyMG9ZelhMZGRyRUhaanEiLCJhcGlfa2V5IjoiMDFLMjlCSERNVlFXUVpaQ0NKWjY4U0c4RFMiLCJ0ZW5hbnRfaWQiOiJiZDA5ZmE1N2Y4OTE1NjJlYmQ4OTNiM2ZhZjVmODMyZDg0N2YzOTZlMmYzOWU2MDA4NDA1NDlhNWI2MDk5Mzc4IiwiaW50ZXJuYWxfc2VjcmV0IjoiZTFjOGI3YzItMmE0MC00MDE4LWJkMTctOWZmMWFjNzA2NDc2In0.fSm5jzX6OhojytKxTMCdyFKASgiZSOvUZJtC1WFRTIQ
@@ -18,6 +18,13 @@ services:
       - db
     networks:
       - veloce-net
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/api"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   frontend:
     build:
@@ -25,8 +32,17 @@ services:
       dockerfile: Dockerfile.frontend
     ports:
       - "80:80"
+    depends_on:
+      - backend
     networks:
       - veloce-net
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   db:
     image: postgres:15
@@ -39,6 +55,13 @@ services:
       - db_data:/var/lib/postgresql/data
     networks:
       - veloce-net
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d veloce"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
 volumes:
   db_data:

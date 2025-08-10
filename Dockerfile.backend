@@ -4,6 +4,9 @@ WORKDIR /app
 ENV TZ=Asia/Kolkata
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
+# Install curl for healthcheck
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
 # Copy and install dependencies
 COPY backend/package*.json ./
 RUN npm install --production=false
