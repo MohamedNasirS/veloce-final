@@ -16,11 +16,9 @@ RUN npx prisma generate
 # Copy entire backend code
 COPY backend ./
 
-# ✅ Copy backend .env file into container
-COPY backend/.env .env
-
 # Build and expose
 RUN npm run build
 EXPOSE 3001
 
+# Use the updated start:prod script
 CMD ["npm", "run", "start:prod"]

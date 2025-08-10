@@ -13,17 +13,13 @@ services:
       - BASE_URL=http://147.93.27.172:3001
       - ADMIN_EMAIL=admin@gmail.com
       - ADMIN_PASSWORD=admin@123
-      - DATABASE_URL=postgres://bd09fa57f891562ebd893b3faf5f832d847f396e2f39e600840549a5b6099378:sk_Hm5Y1TJ5XzQIzx6qjBXu_@db.prisma.io:5432/?sslmode=require
+      - DATABASE_URL=postgresql://user:password@db:5432/veloce?schema=public
     depends_on:
       - db
-    volumes:
-      - ./backend:/app
     networks:
       - veloce-net
 
   frontend:
-    env_file:
-      - .env  # 🔁 Still okay to use for frontend if needed
     build:
       context: .
       dockerfile: Dockerfile.frontend
