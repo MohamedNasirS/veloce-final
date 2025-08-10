@@ -2,8 +2,8 @@
 FROM node:18 AS build
 WORKDIR /app
 
-# Set environment variable for API URL using Docker service name
-ENV VITE_API_URL=/marketplace/api
+# Set environment variable for API URL using the correct path
+ENV VITE_API_URL=""
 
 COPY package*.json ./
 RUN npm install

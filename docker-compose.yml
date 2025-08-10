@@ -26,6 +26,8 @@ services:
       dockerfile: Dockerfile.frontend
     ports:
       - "80:80"
+    environment:
+      - VITE_API_URL=
     depends_on:
       - backend
     networks:
