@@ -19,12 +19,6 @@ services:
     networks:
       - veloce-net
     restart: always
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/api"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
 
   frontend:
     build:
@@ -37,12 +31,6 @@ services:
     networks:
       - veloce-net
     restart: always
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
 
   db:
     image: postgres:15
@@ -52,19 +40,14 @@ services:
       - POSTGRES_DB=veloce
       - TZ=Asia/Kolkata
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     networks:
       - veloce-net
     restart: always
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d veloce"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
 
 volumes:
-  db_data:
+  postgres_data:
+    driver: local
 
 networks:
   veloce-net:
