@@ -18,7 +18,12 @@ COPY backend ./
 
 # Build and expose
 RUN npm run build
+
+# Debug: List the dist directory structure
+RUN ls -la dist/
+RUN find dist/ -type f -name "main.js" | sort
+
 EXPOSE 3001
 
-# Use the updated start:prod script
+# Use npm script which handles both paths
 CMD ["npm", "run", "start:prod"]
