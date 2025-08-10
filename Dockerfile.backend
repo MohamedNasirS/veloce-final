@@ -18,7 +18,11 @@ COPY backend ./
 
 # Build and expose
 RUN npm run build
+
+# Verify the path to main.js
+RUN ls -la dist/src/main.js || echo "File not found at dist/src/main.js"
+
 EXPOSE 3001
 
-# Use npm script
-CMD ["npm", "run", "start:prod"]
+# Use the explicit path to main.js
+CMD ["node", "dist/src/main.js"]
