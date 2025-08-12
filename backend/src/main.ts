@@ -6,6 +6,7 @@ import * as path from 'path';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { INestApplication } from '@nestjs/common';
+import * as bodyParser from 'body-parser';
 
 class CorsIoAdapter extends IoAdapter {
   constructor(private app: INestApplication) {
@@ -42,6 +43,10 @@ class CorsIoAdapter extends IoAdapter {
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // Configure body parser to handle large requests
+  app.use(bodyParser.json({ limit: '20mb' }));
+  app.use(bodyParser.urlencoded({ limit: '20mb', extended: true }));
 
   // Static uploads under /uploads
   app.useStaticAssets(path.resolve(__dirname, '..', 'uploads'), {

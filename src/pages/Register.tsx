@@ -7,6 +7,7 @@ import { Label } from '../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Textarea } from '../components/ui/textarea';
+import { AlertCircle } from 'lucide-react';
 import FileUpload from '../components/FileUpload';
 
 const Register = () => {
@@ -63,6 +64,20 @@ const Register = () => {
       return;
     }
 
+    // Check total file size
+    let totalSize = 0;
+    Object.values(documents).forEach(file => {
+      if (file) totalSize += file.size;
+    });
+
+    // 19MB limit (slightly under 20MB to be safe)
+    const maxTotalSize = 19 * 1024 * 1024;
+    if (totalSize > maxTotalSize) {
+      setError('Total file size exceeds limit. Please reduce file sizes or compress your documents.');
+      setLoading(false);
+      return;
+    }
+
     try {
       // Remove confirmPassword from the data sent to backend
       const { confirmPassword, ...registrationData } = formData;
@@ -98,6 +113,13 @@ const Register = () => {
             <CardDescription>Join the WasteBid platform and start trading</CardDescription>
           </CardHeader>
           <CardContent>
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6 flex items-center">
+                <AlertCircle className="h-5 w-5 mr-2" />
+                <span>{error}</span>
+              </div>
+            )}
+            
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Personal Information */}
               <div>
@@ -218,42 +240,56 @@ const Register = () => {
                   Please upload the following documents for verification. All documents should be clear and legible.
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <FileUpload
-                    label="GST Certificate *"
-                    value={documents.gstCertificate}
-                    onChange={(file) => handleDocumentChange('gstCertificate', file)}
-                    required
-                    description="Upload your company's GST registration certificate"
+                  <FileUpload 
+                    label="GST Certificate" 
+                    required 
+                    maxSizeMB={5}
+                    value={documents.gstCertificate} 
+                    onChange={(file) => handleDocumentChange('gstCertificate', file)} 
                   />
-                  <FileUpload
-                    label="PAN Card *"
-                    value={documents.panCard}
-                    onChange={(file) => handleDocumentChange('panCard', file)}
-                    required
-                    description="Upload company or personal PAN card"
+                  
+                  <FileUpload 
+                    label="PAN Card" 
+                    required 
+                    maxSizeMB={5}
+                    value={documents.panCard} 
+                    onChange={(file) => handleDocumentChange('panCard', file)} 
                   />
-                  <FileUpload
-                    label="Bank Document *"
-                    value={documents.bankDocument}
-                    onChange={(file) => handleDocumentChange('bankDocument', file)}
-                    required
-                    description="Upload bank statement or cancelled cheque"
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <FileUpload 
+                    label="Bank Document" 
+                    required 
+                    maxSizeMB={5}
+                    value={documents.bankDocument} 
+                    onChange={(file) => handleDocumentChange('bankDocument', file)} 
                   />
-                  <FileUpload
-                    label="Authorized Signatory Letter"
-                    value={documents.authorizedSignatory}
-                    onChange={(file) => handleDocumentChange('authorizedSignatory', file)}
-                    description="Upload letter authorizing signatory (if applicable)"
+                  
+                  <FileUpload 
+                    label="Authorized Signatory" 
+                    maxSizeMB={5}
+                    value={documents.authorizedSignatory} 
+                    onChange={(file) => handleDocumentChange('authorizedSignatory', file)} 
                   />
-                  <div className="md:col-span-2">
-                    <FileUpload
-                      label="Company Registration / License *"
-                      value={documents.companyRegistration}
-                      onChange={(file) => handleDocumentChange('companyRegistration', file)}
-                      required
-                      description="Upload company registration certificate or relevant business license"
-                    />
-                  </div>
+                </div>
+                
+                <FileUpload 
+                  label="Company Registration" 
+                  required 
+                  maxSizeMB={5}
+                  value={documents.companyRegistration} 
+                  onChange={(file) => handleDocumentChange('companyRegistration', file)} 
+                />
+                
+                <div className="text-sm text-gray-500 bg-blue-50 p-3 rounded-md">
+                  <p className="font-medium text-blue-700">File Upload Guidelines:</p>
+                  <ul className="list-disc pl-5 mt-1">
+                    <li>Each file must be less than 5MB</li>
+                    <li>Total upload size must be less than 19MB</li>
+                    <li>Accepted formats: PDF, JPG, PNG</li>
+                    <li>For large files, please compress before uploading</li>
+                  </ul>
                 </div>
               </div>
 
@@ -282,31 +318,19 @@ const Register = () => {
                   </div>
                 </div>
               </div>
-
-              {error && (
-                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm">
-                  {error}
+              
+              <div className="flex items-center justify-between">
+                <div className="text-sm">
+                  Already have an account?{' '}
+                  <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500">
+                    Sign in
+                  </Link>
                 </div>
-              )}
-
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'Creating Account...' : 'Create Account'}
-              </Button>
-
-              <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-md text-sm">
-                <p className="font-medium">Important:</p>
-                <p>Your account will be reviewed by our team. You will receive an email notification once your account is approved and you can start using the platform.</p>
+                <Button type="submit" disabled={loading}>
+                  {loading ? 'Registering...' : 'Register'}
+                </Button>
               </div>
             </form>
-
-            <div className="mt-6 text-center text-sm">
-              <p className="text-gray-600">
-                Already have an account?{' '}
-                <Link to="/login" className="text-green-600 hover:text-green-500 font-medium">
-                  Sign in here
-                </Link>
-              </p>
-            </div>
           </CardContent>
         </Card>
       </div>

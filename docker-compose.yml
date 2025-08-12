@@ -33,6 +33,7 @@ services:
     networks:
       - veloce-net
     restart: always
+    # Nginx configured with client_max_body_size 20M to handle larger file uploads
 
   db:
     image: postgres:15

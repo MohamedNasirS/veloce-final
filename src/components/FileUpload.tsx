@@ -2,7 +2,7 @@
 import React, { useRef, useState } from 'react';
 import { Button } from './ui/button';
 import { Label } from './ui/label';
-import { X, Upload, FileText, Image } from 'lucide-react';
+import { X, Upload, FileText, Image, AlertCircle } from 'lucide-react';
 
 interface FileUploadProps {
   label: string;
@@ -11,6 +11,7 @@ interface FileUploadProps {
   onChange: (file: File | null) => void;
   required?: boolean;
   description?: string;
+  maxSizeMB?: number;
 }
 
 const FileUpload: React.FC<FileUploadProps> = ({
@@ -19,19 +20,32 @@ const FileUpload: React.FC<FileUploadProps> = ({
   value,
   onChange,
   required = false,
-  description
+  description,
+  maxSizeMB = 10
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleFileSelect = (file: File | null) => {
+    setError(null);
+    
     if (file) {
       const validTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
-      if (validTypes.includes(file.type)) {
-        onChange(file);
-      } else {
-        alert('Please select a valid file format (PDF, JPG, PNG)');
+      
+      if (!validTypes.includes(file.type)) {
+        setError('Please select a valid file format (PDF, JPG, PNG)');
+        return;
       }
+      
+      // Check file size (convert MB to bytes)
+      const maxSizeBytes = maxSizeMB * 1024 * 1024;
+      if (file.size > maxSizeBytes) {
+        setError(`File size exceeds ${maxSizeMB}MB limit`);
+        return;
+      }
+      
+      onChange(file);
     } else {
       onChange(null);
     }
@@ -89,11 +103,13 @@ const FileUpload: React.FC<FileUploadProps> = ({
       
       <div
         className={`border-2 border-dashed rounded-md p-4 transition-colors cursor-pointer ${
-          dragOver 
-            ? 'border-green-400 bg-green-50' 
-            : value 
-              ? 'border-green-300 bg-green-50' 
-              : 'border-gray-300 hover:border-gray-400'
+          error 
+            ? 'border-red-400 bg-red-50'
+            : dragOver 
+              ? 'border-green-400 bg-green-50' 
+              : value 
+                ? 'border-green-300 bg-green-50' 
+                : 'border-gray-300 hover:border-gray-400'
         }`}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
@@ -136,11 +152,18 @@ const FileUpload: React.FC<FileUploadProps> = ({
               Click to upload or drag and drop
             </p>
             <p className="text-xs text-gray-500 mt-1">
-              PDF, JPG, PNG up to 10MB
+              PDF, JPG, PNG up to {maxSizeMB}MB
             </p>
           </div>
         )}
       </div>
+      
+      {error && (
+        <div className="flex items-center space-x-2 text-red-600 text-sm mt-1">
+          <AlertCircle className="w-4 h-4" />
+          <span>{error}</span>
+        </div>
+      )}
     </div>
   );
 };

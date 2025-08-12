@@ -11,12 +11,16 @@ import {
   Res,
   Req,
   UseGuards,
+  MaxFileSizeValidator,
+  ParseFilePipe,
 } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
 import * as fs from 'fs';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { diskStorage } from 'multer';
+import * as path from 'path';
 
 @Controller('auth')
 export class AuthController {
@@ -34,7 +38,24 @@ export class AuthController {
     { name: 'bankDocument', maxCount: 1 },
     { name: 'authorizedSignatory', maxCount: 1 },
     { name: 'companyRegistration', maxCount: 1 },
-  ]))
+  ], {
+    limits: {
+      fileSize: 10 * 1024 * 1024, // 10MB limit per file
+    },
+    fileFilter: (req, file, callback) => {
+      const allowedMimeTypes = [
+        'application/pdf',
+        'image/jpeg',
+        'image/png',
+        'image/jpg',
+      ];
+      if (allowedMimeTypes.includes(file.mimetype)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Unsupported file type. Only PDF, JPEG, and PNG files are allowed.'), false);
+      }
+    }
+  }))
   async register(
     @Body() registerDto: any,
     @UploadedFiles() files: {
@@ -87,7 +108,24 @@ export class AuthController {
     { name: 'bankDocument', maxCount: 1 },
     { name: 'authorizedSignatory', maxCount: 1 },
     { name: 'companyRegistration', maxCount: 1 },
-  ]))
+  ], {
+    limits: {
+      fileSize: 10 * 1024 * 1024, // 10MB limit per file
+    },
+    fileFilter: (req, file, callback) => {
+      const allowedMimeTypes = [
+        'application/pdf',
+        'image/jpeg',
+        'image/png',
+        'image/jpg',
+      ];
+      if (allowedMimeTypes.includes(file.mimetype)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Unsupported file type. Only PDF, JPEG, and PNG files are allowed.'), false);
+      }
+    }
+  }))
   async updateDocuments(
     @Body() updateDto: any,
     @UploadedFiles() files: {

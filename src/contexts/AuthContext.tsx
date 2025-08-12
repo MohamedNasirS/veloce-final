@@ -1,4 +1,4 @@
-  import React, { createContext, useContext, useState, useEffect } from 'react';
+    import React, { createContext, useContext, useState, useEffect } from 'react';
 
   interface AuthContextType {
     user: any;
@@ -72,6 +72,21 @@
 
         // Add document files with proper field names
         if (userData.documents) {
+          // Check total file size
+          let totalSize = 0;
+          Object.entries(userData.documents).forEach(([_, file]: [string, any]) => {
+            if (file) {
+              totalSize += file.size;
+            }
+          });
+
+          // 19MB limit (slightly under 20MB to be safe)
+          const maxTotalSize = 19 * 1024 * 1024;
+          if (totalSize > maxTotalSize) {
+            throw new Error(`Total file size exceeds limit. Please reduce file sizes or compress your documents.`);
+          }
+
+          // Add files to form data
           Object.entries(userData.documents).forEach(([type, file]: [string, any]) => {
             if (file) {
               formData.append(type, file);
@@ -84,13 +99,25 @@
           body: formData,
         });
 
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.message || 'Registration failed');
+        // Handle non-JSON responses (like HTML error pages)
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+          const data = await response.json();
+          
+          if (!response.ok) {
+            throw new Error(data.message || 'Registration failed');
+          }
+          
+          return data;
+        } else {
+          // Handle non-JSON response (likely an error page)
+          const text = await response.text();
+          if (response.status === 413) {
+            throw new Error('Files are too large. Please reduce file sizes or compress your documents.');
+          } else {
+            throw new Error(`Registration failed: ${response.status} ${response.statusText}`);
+          }
         }
-
-        return data;
       } catch (error) {
         console.error('Registration error:', error);
         throw error;
