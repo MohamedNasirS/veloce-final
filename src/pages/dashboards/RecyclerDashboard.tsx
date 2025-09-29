@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import VendorSuccessRateCard from '../../components/VendorSuccessRateCard';
 import { io } from 'socket.io-client';
 
@@ -27,6 +28,7 @@ const Modal = ({ isOpen, onClose, title, children }) => {
 
 const RecyclerDashboard = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const [allBids, setAllBids] = useState([]);
   const [myParticipations, setMyParticipations] = useState([]);
@@ -129,6 +131,19 @@ const RecyclerDashboard = () => {
     return 'Active';
   };
 
+  // Navigation handlers using React Router
+  const handleNavigateToLiveBids = () => {
+    navigate('/live-bids');
+  };
+
+  const handleNavigateToParticipated = () => {
+    navigate(`/dashboard/${user?.role}/participated`);
+  };
+
+  const handleNavigateToUploadDocuments = () => {
+    navigate(`/dashboard/${user?.role}/upload-documents`);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -209,20 +224,14 @@ const RecyclerDashboard = () => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Button asChild>
-              <a href="/live-bids" className="w-full h-20 text-lg">
-                🔴 View Live Bids
-              </a>
+            <Button onClick={handleNavigateToLiveBids} className="w-full h-20 text-lg">
+              🔴 View Live Bids
             </Button>
-            <Button asChild variant="outline">
-              <a href={`/dashboard/${user?.role}/participated`} className="w-full h-20 text-lg">
-                📊 My Participations
-              </a>
+            <Button onClick={handleNavigateToParticipated} variant="outline" className="w-full h-20 text-lg">
+              📊 My Participations
             </Button>
-            <Button asChild variant="outline">
-              <a href={`/dashboard/${user?.role}/upload-documents`} className="w-full h-20 text-lg">
-                📄 Upload Documents
-              </a>
+            <Button onClick={handleNavigateToUploadDocuments} variant="outline" className="w-full h-20 text-lg">
+              📄 Upload Documents
             </Button>
           </div>
         </CardContent>

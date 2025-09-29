@@ -223,6 +223,7 @@ const DashboardLayout = () => {
           { label: 'Dashboard', path: `/dashboard/${user.role}`, icon: '🏠' },
           { label: 'Live Bids', path: `/live-bids`, icon: '🔴' },
           { label: 'Participated', path: `/dashboard/${user.role}/participated`, icon: '📊' },
+          { label: 'Upload Documents', path: `/dashboard/${user.role}/upload-documents`, icon: '📄' },
         ];
       case 'admin':
         return [
