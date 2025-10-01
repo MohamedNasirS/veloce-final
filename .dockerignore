@@ -1,9 +1,0 @@
-node_modules
-dist
-build
-# ❗️Keep both .env files
-!backend/.env
-!.env
-.git
-*.log
-!backend/node_modules/.prisma
