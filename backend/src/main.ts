@@ -14,20 +14,14 @@ class CorsIoAdapter extends IoAdapter {
   }
 
   createIOServer(port: number, options?: any): any {
-    const allowedOrigins = [
-      'http://147.93.27.172/marketplace',
-      'http://147.93.27.172:8080/marketplace',
-      'http://147.93.27.172:5173', // Add development server
-      'http://147.93.27.172', // Add 147.93.27.172
-    ];
-
     const corsOptions = {
       origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-        if (!origin || allowedOrigins.includes(origin)) {
+        // Allow all localhost origins (any port)
+        if (!origin || origin.startsWith('http://localhost')) {
           callback(null, true);
         } else {
           console.log(`Origin ${origin} not allowed by CORS`);
-          callback(null, true); // Allow all origins for now to debug
+          callback(null, true); // Allow all origins for development
         }
       },
       credentials: true,
@@ -67,21 +61,15 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
   app.useGlobalPipes(new ValidationPipe());
 
-  const allowedOrigins = [
-    'http://147.93.27.172/marketplace',
-    'http://147.93.27.172:8080/marketplace',
-    'http://147.93.27.172:5173', // Add development server
-    'http://147.93.27.172', // Add 147.93.27.172
-  ];
-
-  // Enable CORS with more permissive settings for debugging
+  // Enable CORS - Allow all localhost origins (any port) for development
   app.enableCors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
+      // Allow all localhost origins (any port)
+      if (!origin || (origin && origin.startsWith('http://localhost'))) {
         callback(null, true);
       } else {
         console.log(`Origin ${origin} not allowed by CORS`);
-        callback(null, true); // Allow all origins for now to debug
+        callback(null, true); // Allow all origins for development
       }
     },
     credentials: true,
@@ -95,7 +83,7 @@ async function bootstrap() {
   app.useWebSocketAdapter(new CorsIoAdapter(app));
 
   await app.listen(3001, '0.0.0.0');
-  const baseUrl = 'http://147.93.27.172:3001';
+  const baseUrl = 'http://localhost:3001';
   console.log(`✅ Server running at ${baseUrl}`);
   console.log(`🔗 Swagger: ${baseUrl}/api`);
   console.log(`📁 Static files served from ${baseUrl}/uploads/...`);

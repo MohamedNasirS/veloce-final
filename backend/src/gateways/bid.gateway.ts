@@ -9,10 +9,17 @@ import {
 import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 
-// ❌ Removed inline cors, now handled globally via adapter
+// CORS handled globally via adapter - allowing all localhost origins
 @WebSocketGateway({
   cors: {
-    origin: ['http://147.93.27.172:5173', 'http://147.93.27.172:3000', 'http://147.93.27.172:8080', 'http://147.93.27.172'],
+    origin: (origin: string, callback: (err: Error | null, allow?: boolean) => void) => {
+      // Allow all localhost origins (any port)
+      if (!origin || origin.startsWith('http://localhost')) {
+        callback(null, true);
+      } else {
+        callback(null, true); // Allow all for development
+      }
+    },
     credentials: true,
   },
 })

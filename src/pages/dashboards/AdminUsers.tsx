@@ -53,7 +53,7 @@ const AdminUsers = () => {
     if (!user) return;
 
     // Connect to WebSocket server
-    const newSocket = io('http://147.93.27.172:3001', {
+    const newSocket = io('http://localhost:3001', {
       transports: ['websocket'],
     });
 
@@ -271,19 +271,19 @@ const AdminUsers = () => {
       } catch (error1) {
         console.error('Standard approach failed:', error1);
 
-        // Approach 2: Direct URL to 147.93.27.172 (works in test script)
+        // Approach 2: Direct URL to localhost (works in test script)
         try {
-          console.log('Trying direct 147.93.27.172 URL');
-          response = await axios.delete(`http://147.93.27.172:3001/api/admin/users/${userId}`);
-          console.log('Direct 147.93.27.172 approach successful:', response.data);
+          console.log('Trying direct localhost URL');
+          response = await axios.delete(`http://localhost:3001/api/admin/users/${userId}`);
+          console.log('Direct localhost approach successful:', response.data);
           success = true;
         } catch (error2) {
-          console.error('Direct 147.93.27.172 approach failed:', error2);
+          console.error('Direct localhost approach failed:', error2);
 
           // Approach 3: Use production URL
           try {
             console.log('Trying production URL');
-            response = await axios.delete(`http://147.93.27.172:3001/api/admin/users/${userId}`);
+            response = await axios.delete(`http://localhost:3001/api/admin/users/${userId}`);
             console.log('Production URL approach successful:', response.data);
             success = true;
           } catch (error3) {

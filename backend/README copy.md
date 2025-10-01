@@ -9,7 +9,7 @@ This is a backend [Nest](https://github.com/nestjs/nest) project using Prisma OR
 This project is part of [Auction Contracts](https://github.com/ronylucca/auction-contracts) and it is a backend API that uses Alchemy node services to integrate a blockchain smart contract(Auction)
 This was developed mainly to improve some skills like typescript, to interact with Prisma and of course face blockchain integrations
 
-API's are documented using **Swagger**. Default location http://147.93.27.172:3000/api
+API's are documented using **Swagger**. Default location http://localhost:3000/api
 
 The **ADMIN_WALLET** key is the same as used to deploy the Auction smart contract
 

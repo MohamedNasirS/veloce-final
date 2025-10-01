@@ -19,8 +19,9 @@ export class UserService {
             throw new NotFoundException('User not found');
         }
 
-        if (user.status !== UserStatus.PENDING) {
-            throw new BadRequestException('User is not in pending status');
+        // Allow approving users that are PENDING or REJECTED
+        if (user.status === UserStatus.APPROVED) {
+            throw new BadRequestException('User is already approved');
         }
 
         const updatedUser = await this.prisma.user.update({
@@ -64,8 +65,9 @@ export class UserService {
             throw new NotFoundException('User not found');
         }
 
-        if (user.status !== UserStatus.PENDING) {
-            throw new BadRequestException('User is not in pending status');
+        // Allow rejecting users that are PENDING or APPROVED
+        if (user.status === UserStatus.REJECTED) {
+            throw new BadRequestException('User is already rejected');
         }
 
         const updatedUser = await this.prisma.user.update({

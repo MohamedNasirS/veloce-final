@@ -15,57 +15,78 @@ export class BidsService {
   ) { }
 
   async createBid(images: Express.Multer.File[], dto: CreateBidDto) {
-    const bid = await this.prisma.bid.create({
-      data: {
-        lotName: dto.lotName,
-        description: dto.description,
-        wasteType: dto.wasteType,
-        quantity: parseFloat(dto.quantity),
-        unit: dto.unit,
-        location: dto.location,
-        basePrice: parseFloat(dto.basePrice),
-        minIncrementPercent: parseFloat(dto.minIncrementPercent),
-        currentPrice: parseFloat(dto.basePrice),
-        startDate: new Date(dto.startDate),
-        endDate: new Date(dto.endDate),
-        creatorId: dto.creatorId,
-        status: 'PENDING',
-      },
-    });
-
-    await this.prisma.bidImage.createMany({
-      data: images.map(file => ({
-        bidId: bid.id,
-        path: `/uploads/bids/${file.filename}`,
-      })),
-    });
-
-    // Record initial base price event with correct enum usage
-    await this.prisma.bidEvent.create({
-      data: {
-        bidId: bid.id,
-        userId: null,
-        amount: parseFloat(dto.basePrice),
-        type: BidEventType.BASE_PRICE,
-      },
-    });
-
-    // Get the full bid with creator and images for WebSocket emission
-    const fullBid = await this.prisma.bid.findUnique({
-      where: { id: bid.id },
-      include: {
-        creator: {
-          select: { id: true, name: true, company: true, email: true }
+    try {
+      console.log('📝 Creating bid with DTO:', JSON.stringify(dto, null, 2));
+      console.log('📷 Images received:', images?.length || 0);
+      
+      const bid = await this.prisma.bid.create({
+        data: {
+          lotName: dto.lotName,
+          description: dto.description,
+          wasteType: dto.wasteType,
+          quantity: parseFloat(dto.quantity),
+          unit: dto.unit,
+          location: dto.location,
+          basePrice: parseFloat(dto.basePrice),
+          minIncrementPercent: parseFloat(dto.minIncrementPercent),
+          currentPrice: parseFloat(dto.basePrice),
+          startDate: new Date(dto.startDate),
+          endDate: new Date(dto.endDate),
+          creatorId: dto.creatorId,
+          status: 'PENDING',
         },
-        images: true,
-      },
-    });
+      });
 
-    // 🚀 ENHANCED: Emit real-time event to ALL relevant users for immediate display
-    console.log(`[BidsService] 🚀 IMMEDIATE: New bid created - ${bid.id} by ${fullBid?.creator?.company}`);
-    this.bidGateway.emitNewBidCreatedToAll(fullBid);
+      console.log('✅ Bid created in database:', bid.id);
 
-    return { message: 'Bid created and pending admin approval', bid };
+      if (images && images.length > 0) {
+        await this.prisma.bidImage.createMany({
+          data: images.map(file => ({
+            bidId: bid.id,
+            path: `/uploads/bids/${file.filename}`,
+          })),
+        });
+        console.log(`✅ ${images.length} images saved`);
+      }
+
+      // Record initial base price event with correct enum usage
+      await this.prisma.bidEvent.create({
+        data: {
+          bidId: bid.id,
+          userId: null,
+          amount: parseFloat(dto.basePrice),
+          type: BidEventType.BASE_PRICE,
+        },
+      });
+      console.log('✅ Base price event created');
+
+      // Get the full bid with creator and images for WebSocket emission
+      const fullBid = await this.prisma.bid.findUnique({
+        where: { id: bid.id },
+        include: {
+          creator: {
+            select: { id: true, name: true, company: true, email: true }
+          },
+          images: true,
+        },
+      });
+      console.log('✅ Full bid retrieved with creator and images');
+
+      // 🚀 ENHANCED: Emit real-time event to ALL relevant users for immediate display
+      try {
+        console.log(`[BidsService] 🚀 IMMEDIATE: New bid created - ${bid.id} by ${fullBid?.creator?.company}`);
+        this.bidGateway?.emitNewBidCreatedToAll?.(fullBid);
+        console.log('✅ WebSocket event emitted successfully');
+      } catch (wsError) {
+        console.error('❌ WebSocket emission failed (non-critical):', wsError.message);
+        // Don't fail the bid creation if WebSocket fails
+      }
+
+      return { message: 'Bid created and pending admin approval', bid };
+    } catch (error) {
+      console.error('❌ ERROR in createBid:', error);
+      throw error;
+    }
   }
 
   async approveBid(bidId: string) {

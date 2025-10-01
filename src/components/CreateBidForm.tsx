@@ -16,8 +16,8 @@ const CreateBidForm = () => {
     quantity: '',
     unit: 'kg',
     location: '',
-    address: '',
     basePrice: '',
+    minIncrementPercent: '5',
     startDate: '',
     endDate: '',
   });
@@ -103,24 +103,41 @@ const CreateBidForm = () => {
       });
       
       // Add creator ID
-      submitData.append('createdBy', user?.id || '');
+      submitData.append('creatorId', user?.id || '');
 
       // Add images
       images.forEach((image) => {
         submitData.append('images', image);
       });
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/bids/create`, {
+      console.log('Creating bid with data:', {
+        formData,
+        creatorId: user?.id,
+        images: images.length,
+        apiUrl: import.meta.env.VITE_API_URL
+      });
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/bids`, {
         method: 'POST',
         body: submitData,
       });
 
+      console.log('Response status:', response.status);
+
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorText = await response.text();
+        console.error('Error response:', errorText);
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          throw new Error(`Server error: ${response.status} - ${errorText}`);
+        }
         throw new Error(errorData.message || 'Failed to create bid');
       }
 
       const result = await response.json();
+      console.log('Bid created successfully:', result);
       
       alert('Bid created successfully!');
       navigate('/dashboard/waste-generator/my-bids');
@@ -189,7 +206,7 @@ const CreateBidForm = () => {
             {/* Quantity and Pricing */}
             <div>
               <h3 className="text-lg font-semibold mb-4">Quantity & Pricing</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="quantity">Quantity *</Label>
                   <Input
@@ -229,33 +246,40 @@ const CreateBidForm = () => {
                     required
                   />
                 </div>
+                <div>
+                  <Label htmlFor="minIncrementPercent">Min. Bid Increment (%) *</Label>
+                  <Input
+                    id="minIncrementPercent"
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    value={formData.minIncrementPercent}
+                    onChange={(e) => handleInputChange('minIncrementPercent', e.target.value)}
+                    placeholder="5"
+                    required
+                  />
+                  <p className="text-sm text-gray-500 mt-1">
+                    Minimum percentage increase required for each new bid
+                  </p>
+                </div>
               </div>
             </div>
 
             {/* Location */}
             <div>
               <h3 className="text-lg font-semibold mb-4">Location</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="location">City/Region *</Label>
-                  <Input
-                    id="location"
-                    value={formData.location}
-                    onChange={(e) => handleInputChange('location', e.target.value)}
-                    placeholder="New York, NY"
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="address">Full Address *</Label>
-                  <Input
-                    id="address"
-                    value={formData.address}
-                    onChange={(e) => handleInputChange('address', e.target.value)}
-                    placeholder="123 Industrial Ave, New York, NY 10001"
-                    required
-                  />
-                </div>
+              <div>
+                <Label htmlFor="location">Location (City/Region) *</Label>
+                <Input
+                  id="location"
+                  value={formData.location}
+                  onChange={(e) => handleInputChange('location', e.target.value)}
+                  placeholder="e.g., New York, NY or Industrial Area, Mumbai"
+                  required
+                />
+                <p className="text-sm text-gray-500 mt-1">
+                  Specify where the waste materials are located
+                </p>
               </div>
             </div>
 
