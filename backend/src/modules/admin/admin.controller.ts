@@ -130,7 +130,7 @@ export class AdminController {
         return res.status(404).json({ message: 'No documents found for this user.' });
       }
 
-      const baseUrl = 'http://localhost:3001'; // Replace with your actual base URL from config
+      const baseUrl = 'http://147.93.27.172:3001'; // Replace with your actual base URL from config
       const documents = [];
 
       // Document type mapping

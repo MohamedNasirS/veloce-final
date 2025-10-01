@@ -56,7 +56,7 @@ server {
 
     # API proxy to backend
     location /api/ {
-        proxy_pass http://localhost:3001;
+        proxy_pass http://147.93.27.172:3001;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -76,7 +76,7 @@ server {
 
     # WebSocket support
     location /socket.io/ {
-        proxy_pass http://localhost:3001;
+        proxy_pass http://147.93.27.172:3001;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "Upgrade";

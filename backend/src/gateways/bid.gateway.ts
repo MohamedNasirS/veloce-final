@@ -9,12 +9,12 @@ import {
 import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 
-// CORS handled globally via adapter - allowing all localhost origins
+// CORS handled globally via adapter - allowing all 147.93.27.172 origins
 @WebSocketGateway({
   cors: {
     origin: (origin: string, callback: (err: Error | null, allow?: boolean) => void) => {
-      // Allow all localhost origins (any port)
-      if (!origin || origin.startsWith('http://localhost')) {
+      // Allow all 147.93.27.172 origins (any port)
+      if (!origin || origin.startsWith('http://147.93.27.172')) {
         callback(null, true);
       } else {
         callback(null, true); // Allow all for development

@@ -16,8 +16,8 @@ class CorsIoAdapter extends IoAdapter {
   createIOServer(port: number, options?: any): any {
     const corsOptions = {
       origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-        // Allow all localhost origins (any port)
-        if (!origin || origin.startsWith('http://localhost')) {
+        // Allow all 147.93.27.172 origins (any port)
+        if (!origin || origin.startsWith('http://147.93.27.172')) {
           callback(null, true);
         } else {
           console.log(`Origin ${origin} not allowed by CORS`);
@@ -61,11 +61,11 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
   app.useGlobalPipes(new ValidationPipe());
 
-  // Enable CORS - Allow all localhost origins (any port) for development
+  // Enable CORS - Allow all 147.93.27.172 origins (any port) for development
   app.enableCors({
     origin: (origin, callback) => {
-      // Allow all localhost origins (any port)
-      if (!origin || (origin && origin.startsWith('http://localhost'))) {
+      // Allow all 147.93.27.172 origins (any port)
+      if (!origin || (origin && origin.startsWith('http://147.93.27.172'))) {
         callback(null, true);
       } else {
         console.log(`Origin ${origin} not allowed by CORS`);
@@ -83,7 +83,7 @@ async function bootstrap() {
   app.useWebSocketAdapter(new CorsIoAdapter(app));
 
   await app.listen(3001, '0.0.0.0');
-  const baseUrl = 'http://localhost:3001';
+  const baseUrl = 'http://147.93.27.172:3001';
   console.log(`✅ Server running at ${baseUrl}`);
   console.log(`🔗 Swagger: ${baseUrl}/api`);
   console.log(`📁 Static files served from ${baseUrl}/uploads/...`);
