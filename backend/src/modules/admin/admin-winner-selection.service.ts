@@ -7,6 +7,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { BidsService } from '../bids/bids.service';
 import { BidGateway } from '../../gateways/bid.gateway';
+import { BidEventType } from '@prisma/client';
 
 @Injectable()
 export class AdminWinnerSelectionService {
@@ -361,7 +362,7 @@ export class AdminWinnerSelectionService {
             // Count of winners selected by admin (from bid events)
             this.prisma.bidEvent.count({
                 where: {
-                    type: 'WINNER_SELECTED',
+                    type: BidEventType.WINNER_SELECTED,
                     user: {
                         role: 'admin',
                     },
@@ -370,7 +371,7 @@ export class AdminWinnerSelectionService {
             // Count of winners selected by waste generators
             this.prisma.bidEvent.count({
                 where: {
-                    type: 'WINNER_SELECTED',
+                    type: BidEventType.WINNER_SELECTED,
                     user: {
                         role: 'waste_generator',
                     },
@@ -453,7 +454,7 @@ export class AdminWinnerSelectionService {
                 bidId,
                 userId: newWinnerId,
                 amount: 0,
-                type: 'WINNER_CHANGED' as any, // Custom event type
+                type: BidEventType.WINNER_SELECTED,
             },
         });
 
